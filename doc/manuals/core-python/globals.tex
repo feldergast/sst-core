@@ -1,0 +1,176 @@
+\chapter{Global Functions in SST Python Module}
+\label{chap:globals}
+
+The SST core python module provides a set of global functions not
+attached to any particular class. These functions generally fall into
+one of the following categories: general control and informational
+functions, functions to get handles to existing objects and statistic
+enable and control functions.  These functions are described below.
+Following those descriptions is a section on general notes on
+statistics (Section~\ref{sec:gen-notes-stats}).
+
+\section{General Control and Informational Functions}
+\label{sec:sim-control}
+
+\begin{functiondoc}{setProgramOption(option,value)}{
+    Sets the specified program option for the simulation.  These
+    mirror the options available on the sst command line.  Parameters
+    set in the python file will be overwritten by options set on the
+    command line.  Use sst --help to get a list of available options.
+}
+
+  \param{option} (type: string) configuration option to set
+
+  \param{value} (type: varies by option) value to set option to
+
+  \noreturn
+\end{functiondoc}
+
+
+\begin{functiondoc}{getProgramOptions()}{
+    Returns a dictionary with the current values of the program
+    options.  This will include all program options, not just those
+    set in the python file.  }
+
+  \returns python dictionary with program options and values
+\end{functiondoc}
+
+
+\begin{functiondoc}{getMPIRankCount()}{
+    Returns the number of physical MPI ranks in the simulation
+}
+  
+\returns number of MPI ranks in the simulation
+\end{functiondoc}
+
+
+\begin{functiondoc}{getSSTThreadCount()}{
+    Returns the threads per rank specified for the simulation
+}
+
+  \returns number of threads per MPI rank in the simulation
+\end{functiondoc}
+
+
+\begin{functiondoc}{setSSTThreadCount(threads)}{
+    Sets the number of threads per rank for the simulation.  These
+    values can be overwritten by using -n on the command line.
+}
+
+  \param{threads} (type: int) number of threads per MPI rank to use in the
+  simulation
+
+  \noreturn
+\end{functiondoc}
+
+\begin{functiondoc}{pushNamePrefix(prefix)}{
+    Pushes a name prefix onto the name stack.  This prefix will be
+    added on the names of all Components and Links.  The names in the
+    stack are separated by a period.  Example, if
+    pushNamePrefix(“base”) and pushNamePrefix(“next”) were called in
+    that order, the prefixed name would be “base.next”.  Prefixes can
+    be popped from the stack using popNamePrefix().
+}
+
+  \param{prefix}: (type: string) prefix to add to the name stack
+
+  \noreturn
+\end{functiondoc}
+
+
+\begin{functiondoc}{popNamePrefix()}{
+    Pops a prefix from the name stack.  See pushNamePrefix for how
+    name stacks are used.
+  }
+
+  \noreturn
+\end{functiondoc}
+
+
+\begin{functiondoc}{exit()}{
+    Causes the simulation to exit.
+}
+
+  \noreturn
+\end{functiondoc}
+  
+
+\section{Functions to Get Handles to Existing Objects}
+\label{sec:handles}
+
+\begin{functiondoc}{findComponentByName(name)}{
+    In many cases, Components and SubComponents will be created using
+    library functions and the user will not have direct access to
+    their handles.  In some instances, the provided python modules
+    will have accessor functions that can provide handles to these
+    elements.  If this is not provided by the library, the user can
+    call the findComponentByName() function to get a handle to the
+    desired element.  The function can find handles for both
+    Components and SubComponents.  The use of this function
+    presupposes a knowledge of the naming convention of the elements
+    in the build functions of the library.
+}
+
+  \param{name} (type: string) name of the Component or SubComponent to
+  find.  The name for SubComponents is described above.  Slot indexes
+  are optional in cases where only on SubComponent has been added to a
+  slot, but you can also use [0] in all cases, even when the actual
+  name will not display this way.
+
+  \returns the function will return a handle to the
+  Component/SubComponent with the provided name, or None if the name
+  is not found.
+\end{functiondoc}
+
+
+\section{Statistic Enable and Control Functions}
+\label{sec:stat-enable}
+
+The following functions are used to enable statistics on Components
+and SubComponents using the name or type of the element.  See “General
+Notes on Statistics” (Section \ref{sec:gen-notes-stats}) below for more
+information.
+
+\begin{functiondoc}{enableAllStatisticsForAllComponents(stat_params_dict)}{
+    Enables all statistics for all Components in the simulation that
+    have already been instanced.
+}
+  
+  \param{stat_params_dict} (type: dict) Python dictionary that specified the
+  statistic parameters.  All statistics will get the same set of
+  parameters.
+
+  \noreturn
+\end{functiondoc}
+
+
+\begin{functiondoc}{enableAllStatisticsForComponentName(name, stat_params_dict,
+    apply_to_children=False)}{
+
+    Enables all statistics for the Component named in the call.  This
+    call works for both Components and SubComponents.
+}
+
+  \param{name} (type: string) name of the Component or SubComponent on
+  which to enable all statistics.  The name for SubComponents is
+  described above.  Slot indexes are optional in cases where only one
+  SubComponent has been added to a slot, but you can also use [0] in
+  all cases, even when the actual name will not display this way.  If
+  component with the provided name not found, the function will call
+  fatal().
+
+  \param{stat_params_dict} (type: dict) Python dictionary that
+  specified the statistic parameters.  All statistics will get the
+  same set of parameters
+
+  \param{include_children} (type: bool) If set to True, will
+  recursively enable all statistics on all SubComponent descendants of
+  named element.
+
+  \noreturn
+\end{functiondoc}
+
+
+\section{General Notes on Statistics}
+\label{sec:gen-notes-stats}
+
