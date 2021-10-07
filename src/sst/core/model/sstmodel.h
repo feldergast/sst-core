@@ -42,7 +42,7 @@ public:
      * This function is responsible for reading any configuration
      * files and generating a ConfigGraph object.
      */
-    virtual ConfigGraph* createConfigGraph() = 0;
+    virtual ConfigGraph* createConfigGraph(const RankInfo& my_rank) = 0;
 
     // Helper functions to pull out ELI data for an element
     static bool                            isElementParallelCapable(const std::string& type);

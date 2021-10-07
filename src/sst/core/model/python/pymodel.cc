@@ -1098,7 +1098,7 @@ SSTPythonModelDefinition::~SSTPythonModelDefinition()
 }
 
 ConfigGraph*
-SSTPythonModelDefinition::createConfigGraph()
+SSTPythonModelDefinition::createConfigGraph(const RankInfo&  my_rank)
 {
     output->verbose(CALL_INFO, 1, 0, "Creating config graph for SST using Python model...\n");
 

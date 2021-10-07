@@ -77,6 +77,7 @@ Config::Config(RankInfo rankInfo)
     output_core_prefix  = "@x SST Core: ";
     print_timing        = false;
     print_env           = false;
+    parallel_load       = false;
 
 #ifdef __SST_DEBUG_EVENT_TRACKING__
     event_dump_file = "";
@@ -122,6 +123,7 @@ static const struct sstLongOpts_s sstOptions[] = {
     DEF_FLAGOPT("no-env-config", 0, "disable SST environment configuration", &Config::disableEnvConfig),
     DEF_FLAGOPT("print-timing-info", 0, "print SST timing information", &Config::enablePrintTiming),
     DEF_FLAGOPT("print-env", 0, "print SST environment vairable", &Config::enablePrintEnv),
+    DEF_FLAGOPT("parallel-load", 0, "Enable parallel loading of configuration", &Config::enableParallelLoad),
     /* HiddenNoConfigDesc */
     DEF_ARGOPT("sdl-file", "FILE", "SST Configuration file", &Config::setConfigFile),
     DEF_ARGOPT("stopAtCycle", "TIME", "set time at which simulation will end execution", &Config::setStopAt),

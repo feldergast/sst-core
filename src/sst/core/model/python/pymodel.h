@@ -57,7 +57,7 @@ public:
     SSTPythonModelDefinition(const std::string& script_file, int verbosity, Config* config, double start_time);
     virtual ~SSTPythonModelDefinition();
 
-    ConfigGraph* createConfigGraph() override;
+    ConfigGraph* createConfigGraph(const RankInfo& my_rank) override;
 
 protected:
     void                initModel(const std::string& script_file, int verbosity, Config* config, int argc, char** argv);
@@ -145,7 +145,7 @@ public:
             new SSTPythonModelDefinition(SST_INSTALL_PREFIX "/libexec/xmlToPython.py", verbosity, config, start_time);
     }
 
-    ConfigGraph* createConfigGraph() override { return actual_model_->createConfigGraph(); }
+    ConfigGraph* createConfigGraph(const RankInfo& my_rank) override { return actual_model_->createConfigGraph(my_rank); }
 
     virtual ~SSTXmlModelDefinition() {}
 
