@@ -93,6 +93,47 @@ checkUContainerSerializeDeserialize(T& data)
     return true;
 };
 
+// Classes to test pointer tracking
+class pointed_to_class : public SST::Core::Serialization::serializable
+{
+    int value = -1;
+
+public:
+    pointed_to_class(int val) : value(val) {}
+    pointed_to_class() {}
+
+    int  getValue() { return value; }
+    void setValue(int val) { value = val; }
+
+    void serialize_order(SST::Core::Serialization::serializer& ser) override { ser& value; }
+
+    ImplementSerializable(SST::CoreTestSerialization::pointed_to_class);
+};
+
+class shell : public SST::Core::Serialization::serializable
+{
+    int               value      = -10;
+    pointed_to_class* pointed_to = nullptr;
+
+public:
+    shell(int val, pointed_to_class* ptc = nullptr) : value(val), pointed_to(ptc) {}
+    shell() {}
+
+    int  getValue() { return value; }
+    void setValue(int val) { value = val; }
+
+    pointed_to_class* getPointedTo() { return pointed_to; }
+    void              setPointedTo(pointed_to_class* p) { pointed_to = p; }
+
+    void serialize_order(SST::Core::Serialization::serializer& ser) override
+    {
+        ser& value;
+        ser& pointed_to;
+    }
+
+    ImplementSerializable(SST::CoreTestSerialization::shell);
+};
+
 coreTestSerialization::coreTestSerialization(ComponentId_t id, UNUSED(Params& params)) : Component(id)
 {
     Output& out = getSimulationOutput();
@@ -212,6 +253,51 @@ coreTestSerialization::coreTestSerialization(ComponentId_t id, UNUSED(Params& pa
         if ( !passed )
             out.output("ERROR: serializing as map<string,uintptr_t> and deserializing to "
                        "vector<pair<string,uintptr_t>> did not work properly\n");
+    }
+
+    // Need to test pointer tracking
+    pointed_to_class* ptc10 = new pointed_to_class(10);
+    pointed_to_class* ptc50 = new pointed_to_class(50);
+
+    // First two will share a pointed to element
+    shell* s1 = new shell(25, ptc10);
+    shell* s2 = new shell(100, ptc10);
+
+    // Next two are the same pointer
+    shell* s3 = new shell(150, ptc50);
+    shell* s4 = s3;
+
+    std::vector<shell*> vec = { s1, s2, s3, s4 };
+
+    SST::Core::Serialization::serializer ser;
+    ser.enable_pointer_tracking();
+
+    // Get the size
+    ser.start_sizing();
+    ser&   vec;
+    size_t size = ser.size();
+
+    char* buffer = new char[size];
+
+    // Serialize
+    ser.start_packing(buffer, size);
+    ser& vec;
+
+    // Deserialize
+    std::vector<shell*> vec_out;
+    ser.start_unpacking(buffer, size);
+    ser& vec_out;
+
+    // Now check the results
+
+    // 0 and 1 should have the same object pointed to, but not be the
+    // same object
+    if ( vec_out[0] == vec_out[1] || vec_out[0]->getPointedTo() != vec_out[1]->getPointedTo() ) {
+        out.output("ERROR: serializing objects with shared data using pointer tracking did not work properly\n");
+    }
+
+    if ( vec_out[2] != vec_out[3] ) {
+        out.output("ERROR: serializing two pointers to the same object did not work properly\n");
     }
 }
 

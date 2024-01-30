@@ -87,7 +87,6 @@ nobase_dist_sst_HEADERS = \
 	eli/simpleInfo.h \
 	eli/statsInfo.h \
 	eli/subcompSlotInfo.h \
-	serialization/ser_ptr_type.h \
 	serialization/serializable.h \
 	serialization/serializable_fwd.h \
 	serialization/serialize.h \

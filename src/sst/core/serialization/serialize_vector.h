@@ -51,7 +51,7 @@ public:
         }
 
         for ( size_t i = 0; i < v.size(); ++i ) {
-            serialize<T>()(v[i], ser);
+            ser& v[i];
         }
     }
 };

@@ -163,10 +163,14 @@ public:                                                                         
     }                                                                                                             \
     virtual const char* cls_name() const override { return #obj; }
 
+//    virtual const char* cls_name() const override { return obj_str; }
 #define ImplementSerializableDefaultConstructor(obj, obj_str)                             \
 public:                                                                                   \
-    virtual const char* cls_name() const override { return obj_str; }                     \
-    virtual uint32_t    cls_id() const override                                           \
+    virtual const char* cls_name() const override                                         \
+    {                                                                                     \
+        return SST::Core::Serialization::serializable_builder_impl<obj>::static_name();   \
+    }                                                                                     \
+    virtual uint32_t cls_id() const override                                              \
     {                                                                                     \
         return SST::Core::Serialization::serializable_builder_impl<obj>::static_cls_id(); \
     }                                                                                     \

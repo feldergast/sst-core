@@ -30,6 +30,13 @@ void pack_serializable(serializable* s, serializer& ser);
 
 void unpack_serializable(serializable*& s, serializer& ser);
 
+
+void size_pointer(serializable* s, serializer& ser);
+
+void pack_pointer(serializable* s, serializer& ser);
+
+void unpack_pointer(serializable*& s, serializer& ser);
+
 } // namespace pvt
 
 template <>

@@ -96,7 +96,7 @@ public:
     void operator()(T arr[N], serializer& ser)
     {
         for ( int i = 0; i < N; i++ ) {
-            serialize<T>()(arr[i], ser);
+            ser& arr[i];
         }
     }
 };
@@ -130,7 +130,7 @@ public:
     {
         ser.primitive(arr.sizeptr);
         for ( int i = 0; i < arr.sizeptr; i++ ) {
-            serialize<T>()(arr[i], ser);
+            ser& arr[i];
         }
     }
 };
@@ -168,7 +168,8 @@ template <class TPtr, class IntType>
 inline void
 operator&(serializer& ser, pvt::ser_array_wrapper<TPtr, IntType> arr)
 {
-    serialize<pvt::ser_array_wrapper<TPtr, IntType>>()(arr, ser);
+    operator&<pvt::ser_array_wrapper<TPtr, IntType>>(ser, arr);
+    // serialize<pvt::ser_array_wrapper<TPtr, IntType>>()(arr, ser);
 }
 
 // Needed only because the default version in serialize.h can't get
@@ -178,7 +179,8 @@ template <class TPtr>
 inline void
 operator&(serializer& ser, pvt::raw_ptr_wrapper<TPtr> ptr)
 {
-    serialize<pvt::raw_ptr_wrapper<TPtr>>()(ptr, ser);
+    operator&<pvt::raw_ptr_wrapper<TPtr>>(ser, ptr);
+    // serialize<pvt::raw_ptr_wrapper<TPtr>>()(ptr, ser);
 }
 
 } // namespace Serialization
