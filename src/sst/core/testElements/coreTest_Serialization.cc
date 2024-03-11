@@ -134,6 +134,103 @@ public:
     ImplementSerializable(SST::CoreTestSerialization::shell);
 };
 
+
+// Class used to test serialization of handlers
+struct HandlerTest : public SST::Core::Serialization::serializable
+{
+    // Need 8 combinations to cover void and non-void for return type,
+    // arg type and metadata type
+
+    void call_000() { std::cout << "internal value: " << value << std::endl; }
+
+    void call_001(float f)
+    {
+        std::cout << "internal value: " << value << std::endl;
+        std::cout << "metadata value: " << f << std::endl;
+    }
+
+    void call_010(int in)
+    {
+        std::cout << "internal value: " << value << std::endl;
+        std::cout << "parameter value: " << in << std::endl;
+    }
+
+    void call_011(int in, float f)
+    {
+        std::cout << "internal value: " << value << std::endl;
+        std::cout << "parameter value: " << in << std::endl;
+        std::cout << "metadata value: " << f << std::endl;
+    }
+
+    int call_100()
+    {
+        std::cout << "internal value: " << value << std::endl;
+        return 4;
+    }
+
+    int call_101(float f)
+    {
+        std::cout << "internal value: " << value << std::endl;
+        std::cout << "metadata value: " << f << std::endl;
+        return 5;
+    }
+
+    int call_110(int in)
+    {
+        std::cout << "internal value: " << value << std::endl;
+        std::cout << "parameter value: " << in << std::endl;
+        return 6;
+    }
+
+    int call_111(int in, float f)
+    {
+        std::cout << "internal value: " << value << std::endl;
+        std::cout << "parameter value: " << in << std::endl;
+        std::cout << "metadata value: " << f << std::endl;
+        return 7;
+    }
+
+    int value = -1;
+
+    HandlerTest(int in) : value(in) {}
+    HandlerTest() {}
+
+    void serialize_order(SST::Core::Serialization::serializer& ser) override { ser& value; }
+    ImplementSerializable(HandlerTest)
+};
+
+
+struct RecursiveSerializationTest : public SST::Core::Serialization::serializable
+{
+    template <typename classT, auto funcT, typename dataT = void>
+    using Handler = SSTHandler2<int, int, classT, dataT, funcT>;
+
+    int call(int input, float f)
+    {
+        std::cout << "internal value: " << value << std::endl;
+        std::cout << "parameter value: " << input << std::endl;
+        std::cout << "metadata value: " << f << std::endl;
+        return 101;
+    }
+
+    Handler<RecursiveSerializationTest, &RecursiveSerializationTest::call, float>* handler;
+    int                                                                            value;
+
+    RecursiveSerializationTest() {}
+    RecursiveSerializationTest(int in) : value(in)
+    {
+        handler = new Handler<RecursiveSerializationTest, &RecursiveSerializationTest::call, float>(this, 8.9);
+    }
+
+    void serialize_order(SST::Core::Serialization::serializer& ser) override
+    {
+        ser& value;
+        ser& handler;
+    }
+
+    ImplementSerializable(RecursiveSerializationTest)
+};
+
 coreTestSerialization::coreTestSerialization(ComponentId_t id, UNUSED(Params& params)) : Component(id)
 {
     Output& out = getSimulationOutput();
@@ -299,6 +396,191 @@ coreTestSerialization::coreTestSerialization(ComponentId_t id, UNUSED(Params& pa
     if ( vec_out[2] != vec_out[3] ) {
         out.output("ERROR: serializing two pointers to the same object did not work properly\n");
     }
+
+
+    // Test serialization of handlers
+    HandlerTest* t1 = new HandlerTest(10);
+    HandlerTest* t2 = new HandlerTest(20);
+
+    // ShellBase* sb = new Shell<test, float, &test::foo2>(t, 5.6);
+    // sb->call(15);
+
+    // HandlerBase* s = new Handler<test, float, &test::foo2>(t, 4.5);
+    // Need to test all the variations of the three main template
+    // parameters: returnT, argT, dataT.  We need to do each for void
+    // and non-void.  That makes 8 variations to test.  We'll label by
+    // using 0 for void and 1 for non-void and ordered from MSB to
+    // LSB: returnT, argT, dataT.
+
+    // args -                 returnT, argT,       dataT
+    auto* h000 = new SSTHandler2<void, void, HandlerTest, void, &HandlerTest::call_000>(t1);
+    (*h000)();
+    std::cout << std::endl;
+
+    // args -                 returnT, argT,       dataT
+    auto* h001 = new SSTHandler2<void, void, HandlerTest, float, &HandlerTest::call_001>(t1, 1.2);
+    (*h001)();
+    std::cout << std::endl;
+
+    // args -                 returnT, argT,       dataT
+    auto* h010 = new SSTHandler2<void, int, HandlerTest, void, &HandlerTest::call_010>(t1);
+    (*h010)(52);
+    std::cout << std::endl;
+
+    // args -                 returnT, argT,       dataT
+    auto* h011 = new SSTHandler2<void, int, HandlerTest, float, &HandlerTest::call_011>(t1, 3.4);
+    (*h011)(53);
+    std::cout << std::endl;
+
+    // args -                returnT, argT,       dataT
+    auto* h100 = new SSTHandler2<int, void, HandlerTest, void, &HandlerTest::call_100>(t2);
+    int   ret  = (*h100)();
+    std::cout << "Return value: " << ret << std::endl;
+    std::cout << std::endl;
+
+    // args -                returnT, argT,       dataT
+    auto* h101 = new SSTHandler2<int, void, HandlerTest, float, &HandlerTest::call_101>(t2, 5.6);
+    ret        = (*h101)();
+    std::cout << "Return value: " << ret << std::endl;
+    std::cout << std::endl;
+
+    // args -                returnT, argT,       dataT
+    auto* h110 = new SSTHandler2<int, int, HandlerTest, void, &HandlerTest::call_110>(t2);
+    ret        = (*h110)(62);
+    std::cout << "Return value: " << ret << std::endl;
+    std::cout << std::endl;
+
+    // args -                returnT, argT,       dataT
+    auto* h111 = new SSTHandler2<int, int, HandlerTest, float, &HandlerTest::call_111>(t2, 7.8);
+    ret        = (*h111)(63);
+    std::cout << "Return value: " << ret << std::endl;
+    std::cout << std::endl;
+
+    // // Serialize and deserialize
+
+    // // Get the size
+    ser.start_sizing();
+    ser.enable_pointer_tracking();
+
+    // Going to serialize t1, but not t2.  It should get automatically
+    // serialized when the handlers pointing to it are serialized.
+    ser& t1;
+    ser& h000;
+    ser& h001;
+    ser& h010;
+    ser& h011;
+    ser& h100;
+    ser& h101;
+    ser& h110;
+    ser& h111;
+
+
+    size   = ser.size();
+    buffer = new char[size + 10];
+
+    // Serialize
+    ser.start_packing(buffer, size);
+
+    ser& t1;
+    ser& h000;
+    ser& h001;
+    ser& h010;
+    ser& h011;
+    ser& h100;
+    ser& h101;
+    ser& h110;
+    ser& h111;
+
+    // Delete the original objects
+    delete t1;
+    delete t2;
+    delete h000;
+    delete h001;
+    delete h010;
+    delete h011;
+    delete h100;
+    delete h101;
+    delete h110;
+    delete h111;
+
+
+    // Deserialize
+    HandlerTest*                t1_out;
+    SSTHandlerBase<void, void>* h000_out;
+    SSTHandlerBase<void, void>* h001_out;
+    SSTHandlerBase<void, int>*  h010_out;
+    SSTHandlerBase<void, int>*  h011_out;
+    SSTHandlerBase<int, void>*  h100_out;
+    SSTHandlerBase<int, void>*  h101_out;
+    SSTHandlerBase<int, int>*   h110_out;
+    SSTHandlerBase<int, int>*   h111_out;
+
+    ser.start_unpacking(buffer, size);
+
+    ser& t1_out;
+    ser& h000_out;
+    ser& h001_out;
+    ser& h010_out;
+    ser& h011_out;
+    ser& h100_out;
+    ser& h101_out;
+    ser& h110_out;
+    ser& h111_out;
+
+    std::cout << "Internal value for t1: " << t1_out->value << std::endl;
+    std::cout << std::endl;
+    t1_out->value = 100;
+
+    (*h000_out)();
+    std::cout << std::endl;
+
+    (*h001_out)();
+    std::cout << std::endl;
+
+    (*h010_out)(52);
+    std::cout << std::endl;
+
+    (*h011_out)(53);
+    std::cout << std::endl;
+
+    ret = (*h100_out)();
+    std::cout << "Return value: " << ret << std::endl;
+    std::cout << std::endl;
+
+    ret = (*h101_out)();
+    std::cout << "Return value: " << ret << std::endl;
+    std::cout << std::endl;
+
+    ret = (*h110_out)(62);
+    std::cout << "Return value: " << ret << std::endl;
+    std::cout << std::endl;
+
+    ret = (*h111_out)(63);
+    std::cout << "Return value: " << ret << std::endl;
+    std::cout << std::endl;
+
+
+    // Test recursive serialization using handlers (i.e. the handler
+    // points to the enclosing class
+    RecursiveSerializationTest* rst = new RecursiveSerializationTest(73);
+    (*rst->handler)(17);
+
+    ser.start_sizing();
+    ser& rst;
+
+    size   = ser.size();
+    buffer = new char[size + 10];
+
+    // Serialize
+    ser.start_packing(buffer, size);
+
+    ser& rst;
+
+    RecursiveSerializationTest* rst_out;
+    ser.start_unpacking(buffer, size);
+    ser& rst_out;
+
+    (*rst_out->handler)(17);
 }
 
 

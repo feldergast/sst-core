@@ -142,25 +142,25 @@ class serializable_type
 public:                                   \
     virtual const char* cls_name() const override { return #obj; }
 
-#define NotSerializable(obj)                                                                                      \
-public:                                                                                                           \
-    static void      throw_exc() { serializable_abort(CALL_INFO_LONG, #obj); }                                    \
-    virtual void     serialize_order(SST::Core::Serialization::serializer& UNUSED(sst)) override { throw_exc(); } \
-    virtual uint32_t cls_id() const override                                                                      \
-    {                                                                                                             \
-        throw_exc();                                                                                              \
-        return NullClsId;                                                                                         \
-    }                                                                                                             \
-    static obj* construct_deserialize_stub()                                                                      \
-    {                                                                                                             \
-        throw_exc();                                                                                              \
-        return 0;                                                                                                 \
-    }                                                                                                             \
-    virtual std::string serialization_name() const override                                                       \
-    {                                                                                                             \
-        throw_exc();                                                                                              \
-        return "";                                                                                                \
-    }                                                                                                             \
+#define NotSerializable(obj)                                                                                             \
+public:                                                                                                                  \
+    static void      throw_exc() { ::SST::Core::Serialization::serializable::serializable_abort(CALL_INFO_LONG, #obj); } \
+    virtual void     serialize_order(SST::Core::Serialization::serializer& UNUSED(sst)) override { throw_exc(); }        \
+    virtual uint32_t cls_id() const override                                                                             \
+    {                                                                                                                    \
+        throw_exc();                                                                                                     \
+        return ::SST::Core::Serialization::serializable::NullClsId;                                                      \
+    }                                                                                                                    \
+    static obj* construct_deserialize_stub()                                                                             \
+    {                                                                                                                    \
+        throw_exc();                                                                                                     \
+        return 0;                                                                                                        \
+    }                                                                                                                    \
+    virtual std::string serialization_name() const override                                                              \
+    {                                                                                                                    \
+        throw_exc();                                                                                                     \
+        return "";                                                                                                       \
+    }                                                                                                                    \
     virtual const char* cls_name() const override { return #obj; }
 
 //    virtual const char* cls_name() const override { return obj_str; }

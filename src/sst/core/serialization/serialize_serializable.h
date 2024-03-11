@@ -40,10 +40,11 @@ void unpack_pointer(serializable*& s, serializer& ser);
 } // namespace pvt
 
 template <>
-class serialize<serializable*>
+class serialize_impl<serializable*>
 {
 
-public:
+    template <class A>
+    friend class serialize;
     void operator()(serializable*& s, serializer& ser)
     {
         switch ( ser.mode() ) {
@@ -61,10 +62,12 @@ public:
 };
 
 template <class T>
-class serialize<T*, typename std::enable_if<std::is_base_of<SST::Core::Serialization::serializable, T>::value>::type>
+class serialize_impl<
+    T*, typename std::enable_if<std::is_base_of<SST::Core::Serialization::serializable, T>::value>::type>
 {
 
-public:
+    template <class A>
+    friend class serialize;
     void operator()(T*& s, serializer& ser)
     {
         serializable* sp = static_cast<serializable*>(s);
@@ -103,9 +106,11 @@ serialize_intrusive_ptr(T*& t, serializer& ser)
 }
 
 template <class T>
-class serialize<T, typename std::enable_if<std::is_base_of<SST::Core::Serialization::serializable, T>::value>::type>
+class serialize_impl<
+    T, typename std::enable_if<std::is_base_of<SST::Core::Serialization::serializable, T>::value>::type>
 {
-public:
+    template <class A>
+    friend class serialize;
     inline void operator()(T& t, serializer& ser)
     {
         // T* tmp = &t;

@@ -22,13 +22,14 @@ namespace SST {
 namespace Core {
 namespace Serialization {
 
+
 /**
    Base serialize class.  This is the default, which if hit will
    static_assert.  All other instances are partial specializations of
    this class and do all the real serialization.
  */
 template <class T, class Enable = void>
-class serialize
+class serialize_impl
 {
 public:
     inline void operator()(T& UNUSED(t), serializer& UNUSED(ser))
@@ -46,13 +47,84 @@ public:
     }
 };
 
+
+/**
+   Serialization "gateway" object.  All serializations must come
+   thorugh these template instances in order for pointer tracking to
+   be controlled at one point. The actual serialization will happen in
+   serialize_impl classes.
+ */
+template <class T>
+class serialize
+{
+public:
+    inline void operator()(T& t, serializer& ser)
+    {
+        // If we're not a pointer, no tracking to be done
+        if constexpr ( !std::is_pointer_v<T> ) return serialize_impl<T>()(t, ser);
+        // Need to put this in an else clase for the if constexpr so
+        // it won't be compiled in the non-pointer caseñ
+        else {
+            // We are a pointer, need to see if tracking is turned on
+            if ( !ser.is_pointer_tracking_enabled() ) return serialize_impl<T>()(t, ser);
+
+            uintptr_t ptr = reinterpret_cast<uintptr_t>(t);
+            if ( nullptr == t ) ptr = 0;
+
+            switch ( ser.mode() ) {
+            case serializer::SIZER:
+                // Always put the pointer in
+                ser.size(ptr);
+
+                // If this is a nullptr, then we are done
+                if ( 0 == ptr ) return;
+
+                // If we haven't seen this yet, also need to serialize the
+                // object
+                if ( !ser.check_pointer_pack(ptr) ) { serialize_impl<T>()(t, ser); }
+                break;
+            case serializer::PACK:
+                // Always put the point in
+                ser.pack(ptr);
+
+                // Nothing else to do if this is nullptr
+                if ( 0 == ptr ) return;
+
+                if ( !ser.check_pointer_pack(ptr) ) { serialize_impl<T>()(t, ser); }
+                break;
+            case serializer::UNPACK:
+                // Get the ptr and check to see if we've already deserialized
+                uintptr_t ptr_stored;
+                ser.unpack(ptr_stored);
+
+                // Check to see if this was a nullptr
+                if ( 0 == ptr_stored ) {
+                    t = nullptr;
+                    return;
+                }
+
+                uintptr_t real_ptr = ser.check_pointer_unpack(ptr_stored);
+                if ( real_ptr ) {
+                    // Already deserialized, so just return pointer
+                    t = reinterpret_cast<T>(real_ptr);
+                }
+                else {
+                    serialize_impl<T>()(t, ser);
+                    ser.report_real_pointer(ptr_stored, reinterpret_cast<uintptr_t>(t));
+                }
+            }
+        }
+    }
+};
+
 /**
    Version of serialize that works for fundamental types and enums.
  */
 template <class T>
-class serialize<T, typename std::enable_if<std::is_fundamental<T>::value || std::is_enum<T>::value>::type>
+class serialize_impl<T, typename std::enable_if<std::is_fundamental<T>::value || std::is_enum<T>::value>::type>
 {
-public:
+    template <class A>
+    friend class serialize;
     inline void operator()(T& t, serializer& ser) { ser.primitive(t); }
 };
 
@@ -60,9 +132,10 @@ public:
    Version of serialize that works for bool.
  */
 template <>
-class serialize<bool>
+class serialize_impl<bool>
 {
-public:
+    template <class A>
+    friend class serialize;
     void operator()(bool& t, serializer& ser)
     {
         int bval = t;
@@ -80,9 +153,10 @@ public:
    independent copy after deserialization.
  */
 template <class T>
-class serialize<T*, typename std::enable_if<std::is_fundamental<T>::value || std::is_enum<T>::value>::type>
+class serialize_impl<T*, typename std::enable_if<std::is_fundamental<T>::value || std::is_enum<T>::value>::type>
 {
-public:
+    template <class A>
+    friend class serialize;
     inline void operator()(T*& t, serializer& ser)
     {
         switch ( ser.mode() ) {
@@ -105,9 +179,10 @@ public:
    Version of serialize that works for std::pair.
  */
 template <class U, class V>
-class serialize<std::pair<U, V>>
+class serialize_impl<std::pair<U, V>>
 {
-public:
+    template <class A>
+    friend class serialize;
     inline void operator()(std::pair<U, V>& t, serializer& ser)
     {
         serialize<U>()(t.first, ser);
@@ -122,56 +197,7 @@ template <class T>
 inline void
 operator&(serializer& ser, T& t)
 {
-    if constexpr ( !std::is_pointer_v<T> ) { serialize<T>()(t, ser); }
-    else {
-        if ( !ser.is_pointer_tracking_enabled() ) return serialize<T>()(t, ser);
-
-        uintptr_t ptr = reinterpret_cast<uintptr_t>(t);
-        if ( nullptr == t ) ptr = 0;
-
-        switch ( ser.mode() ) {
-        case serializer::SIZER:
-            // Always put the pointer in
-            ser.size(ptr);
-
-            // If this is a nullptr, then we are done
-            if ( 0 == ptr ) return;
-
-            // If we haven't seen this yet, also need to serialize the
-            // object
-            if ( !ser.check_pointer_pack(ptr) ) { serialize<T>()(t, ser); }
-            break;
-        case serializer::PACK:
-            // Always put the point in
-            ser.pack(ptr);
-
-            // Nothing else to do if this is nullptr
-            if ( 0 == ptr ) return;
-
-            if ( !ser.check_pointer_pack(ptr) ) { serialize<T>()(t, ser); }
-            break;
-        case serializer::UNPACK:
-            // Get the ptr and check to see if we've already deserialized
-            uintptr_t ptr_stored;
-            ser.unpack(ptr_stored);
-
-            // Check to see if this was a nullptr
-            if ( 0 == ptr_stored ) {
-                t = nullptr;
-                return;
-            }
-
-            uintptr_t real_ptr = ser.check_pointer_unpack(ptr_stored);
-            if ( real_ptr ) {
-                // Already deserialized, so just return pointer
-                t = reinterpret_cast<T>(real_ptr);
-            }
-            else {
-                serialize<T>()(t, ser);
-                ser.report_real_pointer(ptr_stored, reinterpret_cast<uintptr_t>(t));
-            }
-        }
-    }
+    serialize<T>()(t, ser);
 }
 } // namespace Serialization
 } // namespace Core

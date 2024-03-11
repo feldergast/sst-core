@@ -79,9 +79,10 @@ raw_ptr(TPtr*& ptr)
    fundamental types and enums.
  */
 template <class T, int N>
-class serialize<T[N], typename std::enable_if<std::is_fundamental<T>::value || std::is_enum<T>::value>::type>
+class serialize_impl<T[N], typename std::enable_if<std::is_fundamental<T>::value || std::is_enum<T>::value>::type>
 {
-public:
+    template <class A>
+    friend class serialize;
     void operator()(T arr[N], serializer& ser) { ser.array<T, N>(arr); }
 };
 
@@ -90,9 +91,10 @@ public:
    non base types.
  */
 template <class T, int N>
-class serialize<T[N], typename std::enable_if<!std::is_fundamental<T>::value && !std::is_enum<T>::value>::type>
+class serialize_impl<T[N], typename std::enable_if<!std::is_fundamental<T>::value && !std::is_enum<T>::value>::type>
 {
-public:
+    template <class A>
+    friend class serialize;
     void operator()(T arr[N], serializer& ser)
     {
         for ( int i = 0; i < N; i++ ) {
@@ -108,11 +110,12 @@ public:
    fundamental types and enums.
  */
 template <class T, class IntType>
-class serialize<
+class serialize_impl<
     pvt::ser_array_wrapper<T, IntType>,
     typename std::enable_if<std::is_fundamental<T>::value || std::is_enum<T>::value>::type>
 {
-public:
+    template <class A>
+    friend class serialize;
     void operator()(pvt::ser_array_wrapper<T, IntType> arr, serializer& ser) { ser.binary(arr.bufptr, arr.sizeptr); }
 };
 
@@ -121,11 +124,12 @@ public:
    non base types.
  */
 template <class T, class IntType>
-class serialize<
+class serialize_impl<
     pvt::ser_array_wrapper<T, IntType>,
     typename std::enable_if<!std::is_fundamental<T>::value && !std::is_enum<T>::value>::type>
 {
-public:
+    template <class A>
+    friend class serialize;
     void operator()(pvt::ser_array_wrapper<T, IntType> arr, serializer& ser)
     {
         ser.primitive(arr.sizeptr);
@@ -140,9 +144,10 @@ public:
    void*.
  */
 template <class IntType>
-class serialize<pvt::ser_array_wrapper<void, IntType>>
+class serialize_impl<pvt::ser_array_wrapper<void, IntType>>
 {
-public:
+    template <class A>
+    friend class serialize;
     void operator()(pvt::ser_array_wrapper<void, IntType> arr, serializer& ser) { ser.binary(arr.bufptr, arr.sizeptr); }
 };
 
@@ -155,9 +160,10 @@ public:
    won't be valid on the other rank.
  */
 template <class TPtr>
-class serialize<pvt::raw_ptr_wrapper<TPtr>>
+class serialize_impl<pvt::raw_ptr_wrapper<TPtr>>
 {
-public:
+    template <class A>
+    friend class serialize;
     void operator()(pvt::raw_ptr_wrapper<TPtr> ptr, serializer& ser) { ser.primitive(ptr.bufptr); }
 };
 

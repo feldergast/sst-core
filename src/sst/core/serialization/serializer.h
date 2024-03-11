@@ -214,8 +214,12 @@ public:
     {
         auto it = ser_pointer_map.find(ptr);
         if ( it != ser_pointer_map.end() ) { return it->second; }
+        // Keep a copy of the ptr in case we have a split report
+        split_key = ptr;
         return 0;
     }
+
+    inline void report_new_pointer(uintptr_t real_ptr) { ser_pointer_map[split_key] = real_ptr; }
 
     inline void report_real_pointer(uintptr_t ptr, uintptr_t real_ptr) { ser_pointer_map[ptr] = real_ptr; }
 
@@ -234,6 +238,7 @@ protected:
 
     std::set<uintptr_t>            ser_pointer_set;
     std::map<uintptr_t, uintptr_t> ser_pointer_map;
+    uintptr_t                      split_key;
 };
 
 } // namespace Serialization
