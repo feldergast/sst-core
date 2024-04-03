@@ -30,6 +30,202 @@
 
 namespace SST {
 
+void
+SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core::Serialization::serializer& ser)
+{
+    // Need to treat Links and SelfLinks differently
+    bool    self_link;
+    // Type of link (Link is not polymorphic, so we can't use
+    // dynamic_cast to see which type it is):
+    // 0 - nullptr
+    // 1 - Link
+    // 2 - SelfLink
+    int16_t type;
+
+    switch ( ser.mode() ) {
+    case serializer::SIZER:
+    case serializer::PACK:
+        // If s is nullptr, just put in a 0
+        if ( nullptr == s ) {
+            type = 0;
+            ser& type;
+            return;
+        }
+        self_link = (s == s->pair_link);
+        if ( self_link ) {
+            type = 2;
+            ser& type;
+            // send_queue will be recreated after deserialization, no
+            // need to serialize (polling links not supported)
+
+            Event::HandlerBase* handler = reinterpret_cast<Event::HandlerBase*>(s->delivery_info);
+            ser&                handler;
+            ser & s->defaultTimeBase;
+            ser & s->latency;
+            // s->pair_link not needed for SelfLinks
+            // s->current_time is automatically set on construction so
+            // no need to serialize
+            ser & s->type;
+            ser & s->mode;
+            ser & s->tag;
+            // Profile tools not yet supported
+            // ser & s->profile_tools;
+        }
+        else {
+            // Regular link
+            type = 1;
+            ser& type;
+
+            // Need to put a uintptr_t in for my pointer and my pair's
+            // pointer.  This will be used to identify link
+            // connections on restart
+
+            // MULTI-PARELLEL RESTART: When supporting different
+            // restart parallelism, will also need to store the rank
+            // of the links in order to have unique identifies for
+            // each link.  For pair linnks on another rank, we will
+            // use the delivery_info field as the pointer part of the
+            // tag (this is the uintptr_t representation of the link
+            // pointer on the remote rank).  This will also require
+            // that the remote rank be stored somewhere in the link
+            // object.  The most likely place is in the tag, since
+            // this field is essentially unused when the link is
+            // connected to a sync object (No ordering in the
+            // SyncQueue and the real tag will be added on the remote
+            // side).
+            uintptr_t ptr = reinterpret_cast<uintptr_t>(s);
+            ser&      ptr;
+            ptr = reinterpret_cast<uintptr_t>(s->pair_link);
+            ser& ptr;
+
+            // Store some of the data we'll need to make decisions
+            // during unpacking
+            ser & s->type;
+            ser & s->mode;
+            ser & s->tag;
+
+            // send_queue will be recreated after deserialization, no
+            // need to serialize (polling links not supported)
+
+            // My delivery_info is stored in my pair_link.
+            // pair_link->delivery_info is an Event::Handler if the
+            // link type is Handler, and is a pointer to the remote
+            // link if it's SYNC
+            if ( s->type == Link::SYNC ) {
+                // Just put in the delivery_info directly
+                ser & s->pair_link->delivery_info;
+            }
+            else {
+                // My handler is stored in my pair_link
+                Event::HandlerBase* handler = reinterpret_cast<Event::HandlerBase*>(s->pair_link->delivery_info);
+                ser&                handler;
+            }
+
+            ser & s->defaultTimeBase;
+            ser & s->latency;
+            // s->pair_link - tag stored above
+            // s->current_time is automatically set on construction so
+            // no need to serialize
+
+            // Profile tools not yet supported
+            // ser & s->profile_tools;
+        }
+        break;
+    case serializer::UNPACK:
+        ser& type;
+
+        // If we put in a nullptr, return a nullptr
+        if ( type == 0 ) {
+            s = nullptr;
+            return;
+        }
+
+        if ( type == 2 ) {
+            // Self link
+            s = new SelfLink();
+
+            // send_queue will be recreated after deserialization, no
+            // need to serialize (polling links not supported)
+
+            Event::HandlerBase* handler;
+            ser&                handler;
+            s->delivery_info = reinterpret_cast<uintptr_t>(handler);
+            ser & s->defaultTimeBase;
+            ser & s->latency;
+            // s->pair_link not needed for SelfLinks
+            // s->current_time is automatically set on construction so
+            // no need to serialize
+            ser & s->type;
+            ser & s->mode;
+            ser & s->tag;
+            // Profile tools not yet supported
+            // ser & s->profile_tools;
+        }
+        else {
+            // Regular link
+
+            // Pull out the tags for the two links
+            uintptr_t my_tag;
+            uintptr_t pair_tag;
+
+            ser& my_tag;
+            ser& pair_tag;
+
+            s               = new Link();
+            Link* pair_link = nullptr;
+
+            // Need to check to see if my pair link has been unpacked
+            auto& link_tracker = Simulation_impl::getSimulation()->link_restart_tracking;
+            if ( link_tracker.count(pair_tag) ) {
+                pair_link = link_tracker[pair_tag];
+                link_tracker.erase(pair_tag);
+                s->pair_link = pair_link;
+            }
+            else {
+                link_tracker[my_tag] = s;
+            }
+
+            ser & s->type;
+            ser & s->mode;
+            ser & s->tag;
+
+            if ( s->type == Link::SYNC ) { ser & s->delivery_info; }
+            else {
+                Event::HandlerBase* handler;
+                ser&                handler;
+                s->delivery_info = reinterpret_cast<uintptr_t>(handler);
+            }
+
+            // If we have a pair link already, swap delivery_info
+            if ( pair_link ) {
+                uintptr_t temp              = s->delivery_info;
+                s->delivery_info            = s->pair_link->delivery_info;
+                s->pair_link->delivery_info = temp;
+            }
+
+            ser & s->defaultTimeBase;
+            ser & s->latency;
+
+            // s->pair_link taken care of above
+            // s->current_time is automatically set on construction so
+            // no need to serialize
+
+            // Need to recreate the send_queue
+            if ( s->pair_link->type == Link::SYNC ) {
+                // TODO: Need to reregister with the SyncManager
+            }
+            else {
+                s->send_queue = Simulation_impl::getSimulation()->getTimeVortex();
+            }
+
+            // Profile tools not yet supported
+            // ser & s->profile_tools;
+        }
+        break;
+    }
+}
+
+
 /**
  * Null Event.  Used when nullptr is passed into any of the send
  * functions.  On delivery, it will delete itself and return nullptr.

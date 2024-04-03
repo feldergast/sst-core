@@ -15,6 +15,7 @@
 
 #include "sst/core/testElements/coreTest_Serialization.h"
 
+#include "sst/core/componentInfo.h"
 #include "sst/core/link.h"
 #include "sst/core/objectSerialization.h"
 #include "sst/core/rng/mersenne.h"
@@ -231,104 +232,114 @@ struct RecursiveSerializationTest : public SST::Core::Serialization::serializabl
     ImplementSerializable(RecursiveSerializationTest)
 };
 
-coreTestSerialization::coreTestSerialization(ComponentId_t id, UNUSED(Params& params)) : Component(id)
+coreTestSerialization::coreTestSerialization(ComponentId_t id, Params& params) : Component(id)
 {
     Output& out = getSimulationOutput();
 
     rng = new SST::RNG::MersenneRNG();
     // Test serialization for various data types
 
-    // Simple Data Types
-    // int8, int16, int32, int64, uint8, uint16, uint32, uint64, float, double, pair<int, int>, string
+    std::string test = params.find<std::string>("test");
+    if ( test == "" ) out.fatal(CALL_INFO_LONG, 1, "ERROR: Must specify test type\n");
+
+    // Declare here to avoid having to declare it for each test type
     bool passed;
 
-    passed = checkSimpleSerializeDeserialize<int8_t>(rng->generateNextInt32());
-    if ( !passed ) out.output("ERROR: int8_t did not serialize/deserialize properly\n");
+    if ( test == "pod" ) {
+        // Test the POD (plain old data) types
 
-    passed = checkSimpleSerializeDeserialize<int16_t>(rng->generateNextInt32());
-    if ( !passed ) out.output("ERROR: int16_t did not serialize/deserialize properly\n");
+        // Simple Data Types
+        // int8, int16, int32, int64, uint8, uint16, uint32, uint64, float, double, pair<int, int>, string
 
-    passed = checkSimpleSerializeDeserialize<int32_t>(rng->generateNextInt32());
-    if ( !passed ) out.output("ERROR: int32_t did not serialize/deserialize properly\n");
+        passed = checkSimpleSerializeDeserialize<int8_t>(rng->generateNextInt32());
+        if ( !passed ) out.output("ERROR: int8_t did not serialize/deserialize properly\n");
 
-    passed = checkSimpleSerializeDeserialize<int64_t>(rng->generateNextInt64());
-    if ( !passed ) out.output("ERROR: int64_t did not serialize/deserialize properly\n");
+        passed = checkSimpleSerializeDeserialize<int16_t>(rng->generateNextInt32());
+        if ( !passed ) out.output("ERROR: int16_t did not serialize/deserialize properly\n");
 
-    passed = checkSimpleSerializeDeserialize<uint8_t>(rng->generateNextUInt32());
-    if ( !passed ) out.output("ERROR: uint8_t did not serialize/deserialize properly\n");
+        passed = checkSimpleSerializeDeserialize<int32_t>(rng->generateNextInt32());
+        if ( !passed ) out.output("ERROR: int32_t did not serialize/deserialize properly\n");
 
-    passed = checkSimpleSerializeDeserialize<uint16_t>(rng->generateNextUInt32());
-    if ( !passed ) out.output("ERROR: uint16_t did not serialize/deserialize properly\n");
+        passed = checkSimpleSerializeDeserialize<int64_t>(rng->generateNextInt64());
+        if ( !passed ) out.output("ERROR: int64_t did not serialize/deserialize properly\n");
 
-    passed = checkSimpleSerializeDeserialize<uint32_t>(rng->generateNextUInt32());
-    if ( !passed ) out.output("ERROR: uint32_t did not serialize/deserialize properly\n");
+        passed = checkSimpleSerializeDeserialize<uint8_t>(rng->generateNextUInt32());
+        if ( !passed ) out.output("ERROR: uint8_t did not serialize/deserialize properly\n");
 
-    passed = checkSimpleSerializeDeserialize<uint64_t>(rng->generateNextUInt64());
-    if ( !passed ) out.output("ERROR: uint64_t did not serialize/deserialize properly\n");
+        passed = checkSimpleSerializeDeserialize<uint16_t>(rng->generateNextUInt32());
+        if ( !passed ) out.output("ERROR: uint16_t did not serialize/deserialize properly\n");
 
-    passed = checkSimpleSerializeDeserialize<float>(rng->nextUniform() * 1000);
-    if ( !passed ) out.output("ERROR: float did not serialize/deserialize properly\n");
+        passed = checkSimpleSerializeDeserialize<uint32_t>(rng->generateNextUInt32());
+        if ( !passed ) out.output("ERROR: uint32_t did not serialize/deserialize properly\n");
 
-    passed = checkSimpleSerializeDeserialize<double>(rng->nextUniform() * 1000000);
-    if ( !passed ) out.output("ERROR: double did not serialize/deserialize properly\n");
+        passed = checkSimpleSerializeDeserialize<uint64_t>(rng->generateNextUInt64());
+        if ( !passed ) out.output("ERROR: uint64_t did not serialize/deserialize properly\n");
 
-    passed = checkSimpleSerializeDeserialize<std::string>("test string");
-    if ( !passed ) out.output("ERROR: string did not serialize/deserialize properly\n");
+        passed = checkSimpleSerializeDeserialize<float>(rng->nextUniform() * 1000);
+        if ( !passed ) out.output("ERROR: float did not serialize/deserialize properly\n");
 
-    passed = checkSimpleSerializeDeserialize(
-        std::make_pair<int32_t, int32_t>(rng->generateNextInt32(), rng->generateNextInt32()));
-    if ( !passed ) out.output("ERROR: pair<int32_t,int32_t> did not serialize/deserialize properly\n");
+        passed = checkSimpleSerializeDeserialize<double>(rng->nextUniform() * 1000000);
+        if ( !passed ) out.output("ERROR: double did not serialize/deserialize properly\n");
 
-    // Ordered Containers
-    // map, set, vector, list, deque
-    std::map<int32_t, int32_t> map_in;
-    for ( int i = 0; i < 10; ++i )
-        map_in[rng->generateNextInt32()] = rng->generateNextInt32();
-    passed = checkContainerSerializeDeserialize(map_in);
-    if ( !passed ) out.output("ERROR: map<int32_t,int32_t> did not serialize/deserialize properly\n");
+        passed = checkSimpleSerializeDeserialize<std::string>("test string");
+        if ( !passed ) out.output("ERROR: string did not serialize/deserialize properly\n");
 
-    std::set<int32_t> set_in;
-    for ( int i = 0; i < 10; ++i )
-        set_in.insert(rng->generateNextInt32());
-    passed = checkContainerSerializeDeserialize(set_in);
-    if ( !passed ) out.output("ERROR: set<int32_t> did not serialize/deserialize properly\n");
+        passed = checkSimpleSerializeDeserialize(
+            std::make_pair<int32_t, int32_t>(rng->generateNextInt32(), rng->generateNextInt32()));
+        if ( !passed ) out.output("ERROR: pair<int32_t,int32_t> did not serialize/deserialize properly\n");
+    }
+    else if ( test == "ordered_containers" ) {
+        // Ordered Containers
+        // map, set, vector, list, deque
+        std::map<int32_t, int32_t> map_in;
+        for ( int i = 0; i < 10; ++i )
+            map_in[rng->generateNextInt32()] = rng->generateNextInt32();
+        passed = checkContainerSerializeDeserialize(map_in);
+        if ( !passed ) out.output("ERROR: map<int32_t,int32_t> did not serialize/deserialize properly\n");
 
-    std::vector<int32_t> vector_in;
-    for ( int i = 0; i < 10; ++i )
-        vector_in.push_back(rng->generateNextInt32());
-    passed = checkContainerSerializeDeserialize(vector_in);
-    if ( !passed ) out.output("ERROR: vector<int32_t> did not serialize/deserialize properly\n");
+        std::set<int32_t> set_in;
+        for ( int i = 0; i < 10; ++i )
+            set_in.insert(rng->generateNextInt32());
+        passed = checkContainerSerializeDeserialize(set_in);
+        if ( !passed ) out.output("ERROR: set<int32_t> did not serialize/deserialize properly\n");
 
-    std::list<int32_t> list_in;
-    for ( int i = 0; i < 10; ++i )
-        list_in.push_back(rng->generateNextInt32());
-    passed = checkContainerSerializeDeserialize(list_in);
-    if ( !passed ) out.output("ERROR: list<int32_t> did not serialize/deserialize properly\n");
+        std::vector<int32_t> vector_in;
+        for ( int i = 0; i < 10; ++i )
+            vector_in.push_back(rng->generateNextInt32());
+        passed = checkContainerSerializeDeserialize(vector_in);
+        if ( !passed ) out.output("ERROR: vector<int32_t> did not serialize/deserialize properly\n");
 
-    std::deque<int32_t> deque_in;
-    for ( int i = 0; i < 10; ++i )
-        deque_in.push_back(rng->generateNextInt32());
-    passed = checkContainerSerializeDeserialize(deque_in);
-    if ( !passed ) out.output("ERROR: deque<int32_t> did not serialize/deserialize properly\n");
+        std::list<int32_t> list_in;
+        for ( int i = 0; i < 10; ++i )
+            list_in.push_back(rng->generateNextInt32());
+        passed = checkContainerSerializeDeserialize(list_in);
+        if ( !passed ) out.output("ERROR: list<int32_t> did not serialize/deserialize properly\n");
 
-    // Unordered Containers
-    // unordered_map, unordered_set
-    std::unordered_map<int32_t, int32_t> umap_in;
-    for ( int i = 0; i < 10; ++i )
-        umap_in[rng->generateNextInt32()] = rng->generateNextInt32();
-    passed = checkUContainerSerializeDeserialize(umap_in);
-    if ( !passed ) out.output("ERROR: unordered_map<int32_t,int32_t> did not serialize/deserialize properly\n");
+        std::deque<int32_t> deque_in;
+        for ( int i = 0; i < 10; ++i )
+            deque_in.push_back(rng->generateNextInt32());
+        passed = checkContainerSerializeDeserialize(deque_in);
+        if ( !passed ) out.output("ERROR: deque<int32_t> did not serialize/deserialize properly\n");
+    }
+    else if ( test == "unordered_containers" ) {
+        // Unordered Containers
+        // unordered_map, unordered_set
+        std::unordered_map<int32_t, int32_t> umap_in;
+        for ( int i = 0; i < 10; ++i )
+            umap_in[rng->generateNextInt32()] = rng->generateNextInt32();
+        passed = checkUContainerSerializeDeserialize(umap_in);
+        if ( !passed ) out.output("ERROR: unordered_map<int32_t,int32_t> did not serialize/deserialize properly\n");
 
-    std::unordered_set<int32_t> uset_in;
-    for ( int i = 0; i < 10; ++i )
-        uset_in.insert(rng->generateNextInt32());
-    passed = checkUContainerSerializeDeserialize(uset_in);
-    if ( !passed ) out.output("ERROR: unordered_set<int32_t,int32_t> did not serialize/deserialize properly\n");
+        std::unordered_set<int32_t> uset_in;
+        for ( int i = 0; i < 10; ++i )
+            uset_in.insert(rng->generateNextInt32());
+        passed = checkUContainerSerializeDeserialize(uset_in);
+        if ( !passed ) out.output("ERROR: unordered_set<int32_t,int32_t> did not serialize/deserialize properly\n");
+    }
+    else if ( test == "map_to_vector" ) {
 
+        // Containers to other containers
 
-    // Containers to other containers
-
-    {
         // There is one instance where we serialize a
         // std::map<std::string, uintptr_t> and deserialize as a
         // std::vector<std::pair<std::string, uintptr_t>>, so check that
@@ -351,236 +362,276 @@ coreTestSerialization::coreTestSerialization(ComponentId_t id, UNUSED(Params& pa
             out.output("ERROR: serializing as map<string,uintptr_t> and deserializing to "
                        "vector<pair<string,uintptr_t>> did not work properly\n");
     }
+    else if ( test == "pointer_tracking" ) {
+        // Need to test pointer tracking
+        pointed_to_class* ptc10 = new pointed_to_class(10);
+        pointed_to_class* ptc50 = new pointed_to_class(50);
 
-    // Need to test pointer tracking
-    pointed_to_class* ptc10 = new pointed_to_class(10);
-    pointed_to_class* ptc50 = new pointed_to_class(50);
+        // First two will share a pointed to element
+        shell* s1 = new shell(25, ptc10);
+        shell* s2 = new shell(100, ptc10);
 
-    // First two will share a pointed to element
-    shell* s1 = new shell(25, ptc10);
-    shell* s2 = new shell(100, ptc10);
+        // Next two are the same pointer
+        shell* s3 = new shell(150, ptc50);
+        shell* s4 = s3;
 
-    // Next two are the same pointer
-    shell* s3 = new shell(150, ptc50);
-    shell* s4 = s3;
+        std::vector<shell*> vec = { s1, s2, s3, s4 };
 
-    std::vector<shell*> vec = { s1, s2, s3, s4 };
+        SST::Core::Serialization::serializer ser;
+        ser.enable_pointer_tracking();
 
-    SST::Core::Serialization::serializer ser;
-    ser.enable_pointer_tracking();
+        // Get the size
+        ser.start_sizing();
+        ser&   vec;
+        size_t size = ser.size();
 
-    // Get the size
-    ser.start_sizing();
-    ser&   vec;
-    size_t size = ser.size();
+        char* buffer = new char[size];
 
-    char* buffer = new char[size];
+        // Serialize
+        ser.start_packing(buffer, size);
+        ser& vec;
 
-    // Serialize
-    ser.start_packing(buffer, size);
-    ser& vec;
+        // Deserialize
+        std::vector<shell*> vec_out;
+        ser.start_unpacking(buffer, size);
+        ser& vec_out;
 
-    // Deserialize
-    std::vector<shell*> vec_out;
-    ser.start_unpacking(buffer, size);
-    ser& vec_out;
+        // Now check the results
 
-    // Now check the results
+        // 0 and 1 should have the same object pointed to, but not be the
+        // same object
+        if ( vec_out[0] == vec_out[1] || vec_out[0]->getPointedTo() != vec_out[1]->getPointedTo() ) {
+            out.output("ERROR: serializing objects with shared data using pointer tracking did not work properly\n");
+        }
 
-    // 0 and 1 should have the same object pointed to, but not be the
-    // same object
-    if ( vec_out[0] == vec_out[1] || vec_out[0]->getPointedTo() != vec_out[1]->getPointedTo() ) {
-        out.output("ERROR: serializing objects with shared data using pointer tracking did not work properly\n");
+        if ( vec_out[2] != vec_out[3] ) {
+            out.output("ERROR: serializing two pointers to the same object did not work properly\n");
+        }
     }
+    else if ( test == "handler" ) {
 
-    if ( vec_out[2] != vec_out[3] ) {
-        out.output("ERROR: serializing two pointers to the same object did not work properly\n");
+        // Test serialization of handlers
+        HandlerTest* t1 = new HandlerTest(10);
+        HandlerTest* t2 = new HandlerTest(20);
+
+        // ShellBase* sb = new Shell<test, float, &test::foo2>(t, 5.6);
+        // sb->call(15);
+
+        // HandlerBase* s = new Handler<test, float, &test::foo2>(t, 4.5);
+        // Need to test all the variations of the three main template
+        // parameters: returnT, argT, dataT.  We need to do each for void
+        // and non-void.  That makes 8 variations to test.  We'll label by
+        // using 0 for void and 1 for non-void and ordered from MSB to
+        // LSB: returnT, argT, dataT.
+
+        // args -                 returnT, argT,       dataT
+        auto* h000 = new SSTHandler2<void, void, HandlerTest, void, &HandlerTest::call_000>(t1);
+        (*h000)();
+        std::cout << std::endl;
+
+        // args -                 returnT, argT,       dataT
+        auto* h001 = new SSTHandler2<void, void, HandlerTest, float, &HandlerTest::call_001>(t1, 1.2);
+        (*h001)();
+        std::cout << std::endl;
+
+        // args -                 returnT, argT,       dataT
+        auto* h010 = new SSTHandler2<void, int, HandlerTest, void, &HandlerTest::call_010>(t1);
+        (*h010)(52);
+        std::cout << std::endl;
+
+        // args -                 returnT, argT,       dataT
+        auto* h011 = new SSTHandler2<void, int, HandlerTest, float, &HandlerTest::call_011>(t1, 3.4);
+        (*h011)(53);
+        std::cout << std::endl;
+
+        // args -                returnT, argT,       dataT
+        auto* h100 = new SSTHandler2<int, void, HandlerTest, void, &HandlerTest::call_100>(t2);
+        int   ret  = (*h100)();
+        std::cout << "Return value: " << ret << std::endl;
+        std::cout << std::endl;
+
+        // args -                returnT, argT,       dataT
+        auto* h101 = new SSTHandler2<int, void, HandlerTest, float, &HandlerTest::call_101>(t2, 5.6);
+        ret        = (*h101)();
+        std::cout << "Return value: " << ret << std::endl;
+        std::cout << std::endl;
+
+        // args -                returnT, argT,       dataT
+        auto* h110 = new SSTHandler2<int, int, HandlerTest, void, &HandlerTest::call_110>(t2);
+        ret        = (*h110)(62);
+        std::cout << "Return value: " << ret << std::endl;
+        std::cout << std::endl;
+
+        // args -                returnT, argT,       dataT
+        auto* h111 = new SSTHandler2<int, int, HandlerTest, float, &HandlerTest::call_111>(t2, 7.8);
+        ret        = (*h111)(63);
+        std::cout << "Return value: " << ret << std::endl;
+        std::cout << std::endl;
+
+        // // Serialize and deserialize
+        SST::Core::Serialization::serializer ser;
+        ser.enable_pointer_tracking();
+
+        // // Get the size
+        ser.start_sizing();
+        ser.enable_pointer_tracking();
+
+        // Going to serialize t1, but not t2.  It should get automatically
+        // serialized when the handlers pointing to it are serialized.
+        ser& t1;
+        ser& h000;
+        ser& h001;
+        ser& h010;
+        ser& h011;
+        ser& h100;
+        ser& h101;
+        ser& h110;
+        ser& h111;
+
+
+        size_t size   = ser.size();
+        char*  buffer = new char[size + 10];
+
+        // Serialize
+        ser.start_packing(buffer, size);
+
+        ser& t1;
+        ser& h000;
+        ser& h001;
+        ser& h010;
+        ser& h011;
+        ser& h100;
+        ser& h101;
+        ser& h110;
+        ser& h111;
+
+        // Delete the original objects
+        delete t1;
+        delete t2;
+        delete h000;
+        delete h001;
+        delete h010;
+        delete h011;
+        delete h100;
+        delete h101;
+        delete h110;
+        delete h111;
+
+
+        // Deserialize
+        HandlerTest*                t1_out;
+        SSTHandlerBase<void, void>* h000_out;
+        SSTHandlerBase<void, void>* h001_out;
+        SSTHandlerBase<void, int>*  h010_out;
+        SSTHandlerBase<void, int>*  h011_out;
+        SSTHandlerBase<int, void>*  h100_out;
+        SSTHandlerBase<int, void>*  h101_out;
+        SSTHandlerBase<int, int>*   h110_out;
+        SSTHandlerBase<int, int>*   h111_out;
+
+        ser.start_unpacking(buffer, size);
+
+        ser& t1_out;
+        ser& h000_out;
+        ser& h001_out;
+        ser& h010_out;
+        ser& h011_out;
+        ser& h100_out;
+        ser& h101_out;
+        ser& h110_out;
+        ser& h111_out;
+
+        std::cout << "Internal value for t1: " << t1_out->value << std::endl;
+        std::cout << std::endl;
+        t1_out->value = 100;
+
+        (*h000_out)();
+        std::cout << std::endl;
+
+        (*h001_out)();
+        std::cout << std::endl;
+
+        (*h010_out)(52);
+        std::cout << std::endl;
+
+        (*h011_out)(53);
+        std::cout << std::endl;
+
+        ret = (*h100_out)();
+        std::cout << "Return value: " << ret << std::endl;
+        std::cout << std::endl;
+
+        ret = (*h101_out)();
+        std::cout << "Return value: " << ret << std::endl;
+        std::cout << std::endl;
+
+        ret = (*h110_out)(62);
+        std::cout << "Return value: " << ret << std::endl;
+        std::cout << std::endl;
+
+        ret = (*h111_out)(63);
+        std::cout << "Return value: " << ret << std::endl;
+        std::cout << std::endl;
+
+
+        // Test recursive serialization using handlers (i.e. the handler
+        // points to the enclosing class
+        RecursiveSerializationTest* rst = new RecursiveSerializationTest(73);
+        (*rst->handler)(17);
+
+        ser.start_sizing();
+        ser& rst;
+
+        size   = ser.size();
+        buffer = new char[size + 10];
+
+        // Serialize
+        ser.start_packing(buffer, size);
+
+        ser& rst;
+
+        RecursiveSerializationTest* rst_out;
+        ser.start_unpacking(buffer, size);
+        ser& rst_out;
+
+        (*rst_out->handler)(17);
     }
+    else if ( test == "componentinfo" ) {
+        ComponentInfo info(0, "top_component", "NONE", getTimeConverter("2GHz"));
+
+        ComponentInfo* rinfo = info.test_addSubComponentInfo("subcomp0_0", "slot0");
+        rinfo->test_addSubComponentInfo("subcomp1_0", "slot0", getTimeConverter("1GHz"));
+        rinfo->test_addSubComponentInfo("subcomp1_1", "slot1", getTimeConverter("500MHz"));
+
+        info.test_addSubComponentInfo("subcomp0_1", "slot1");
+
+        info.test_printComponentInfoHierarchy();
+
+        SST::Core::Serialization::serializer ser;
+        ser.enable_pointer_tracking();
+
+        // // Get the size
+        ser.start_sizing();
+        ser | info;
 
 
-    // Test serialization of handlers
-    HandlerTest* t1 = new HandlerTest(10);
-    HandlerTest* t2 = new HandlerTest(20);
+        size_t size   = ser.size();
+        char*  buffer = new char[size + 10];
 
-    // ShellBase* sb = new Shell<test, float, &test::foo2>(t, 5.6);
-    // sb->call(15);
+        // Serialize
+        ser.start_packing(buffer, size);
+        ser | info;
 
-    // HandlerBase* s = new Handler<test, float, &test::foo2>(t, 4.5);
-    // Need to test all the variations of the three main template
-    // parameters: returnT, argT, dataT.  We need to do each for void
-    // and non-void.  That makes 8 variations to test.  We'll label by
-    // using 0 for void and 1 for non-void and ordered from MSB to
-    // LSB: returnT, argT, dataT.
+        ComponentInfo info2;
 
-    // args -                 returnT, argT,       dataT
-    auto* h000 = new SSTHandler2<void, void, HandlerTest, void, &HandlerTest::call_000>(t1);
-    (*h000)();
-    std::cout << std::endl;
+        ser.start_unpacking(buffer, size);
+        ser | info2;
 
-    // args -                 returnT, argT,       dataT
-    auto* h001 = new SSTHandler2<void, void, HandlerTest, float, &HandlerTest::call_001>(t1, 1.2);
-    (*h001)();
-    std::cout << std::endl;
-
-    // args -                 returnT, argT,       dataT
-    auto* h010 = new SSTHandler2<void, int, HandlerTest, void, &HandlerTest::call_010>(t1);
-    (*h010)(52);
-    std::cout << std::endl;
-
-    // args -                 returnT, argT,       dataT
-    auto* h011 = new SSTHandler2<void, int, HandlerTest, float, &HandlerTest::call_011>(t1, 3.4);
-    (*h011)(53);
-    std::cout << std::endl;
-
-    // args -                returnT, argT,       dataT
-    auto* h100 = new SSTHandler2<int, void, HandlerTest, void, &HandlerTest::call_100>(t2);
-    int   ret  = (*h100)();
-    std::cout << "Return value: " << ret << std::endl;
-    std::cout << std::endl;
-
-    // args -                returnT, argT,       dataT
-    auto* h101 = new SSTHandler2<int, void, HandlerTest, float, &HandlerTest::call_101>(t2, 5.6);
-    ret        = (*h101)();
-    std::cout << "Return value: " << ret << std::endl;
-    std::cout << std::endl;
-
-    // args -                returnT, argT,       dataT
-    auto* h110 = new SSTHandler2<int, int, HandlerTest, void, &HandlerTest::call_110>(t2);
-    ret        = (*h110)(62);
-    std::cout << "Return value: " << ret << std::endl;
-    std::cout << std::endl;
-
-    // args -                returnT, argT,       dataT
-    auto* h111 = new SSTHandler2<int, int, HandlerTest, float, &HandlerTest::call_111>(t2, 7.8);
-    ret        = (*h111)(63);
-    std::cout << "Return value: " << ret << std::endl;
-    std::cout << std::endl;
-
-    // // Serialize and deserialize
-
-    // // Get the size
-    ser.start_sizing();
-    ser.enable_pointer_tracking();
-
-    // Going to serialize t1, but not t2.  It should get automatically
-    // serialized when the handlers pointing to it are serialized.
-    ser& t1;
-    ser& h000;
-    ser& h001;
-    ser& h010;
-    ser& h011;
-    ser& h100;
-    ser& h101;
-    ser& h110;
-    ser& h111;
-
-
-    size   = ser.size();
-    buffer = new char[size + 10];
-
-    // Serialize
-    ser.start_packing(buffer, size);
-
-    ser& t1;
-    ser& h000;
-    ser& h001;
-    ser& h010;
-    ser& h011;
-    ser& h100;
-    ser& h101;
-    ser& h110;
-    ser& h111;
-
-    // Delete the original objects
-    delete t1;
-    delete t2;
-    delete h000;
-    delete h001;
-    delete h010;
-    delete h011;
-    delete h100;
-    delete h101;
-    delete h110;
-    delete h111;
-
-
-    // Deserialize
-    HandlerTest*                t1_out;
-    SSTHandlerBase<void, void>* h000_out;
-    SSTHandlerBase<void, void>* h001_out;
-    SSTHandlerBase<void, int>*  h010_out;
-    SSTHandlerBase<void, int>*  h011_out;
-    SSTHandlerBase<int, void>*  h100_out;
-    SSTHandlerBase<int, void>*  h101_out;
-    SSTHandlerBase<int, int>*   h110_out;
-    SSTHandlerBase<int, int>*   h111_out;
-
-    ser.start_unpacking(buffer, size);
-
-    ser& t1_out;
-    ser& h000_out;
-    ser& h001_out;
-    ser& h010_out;
-    ser& h011_out;
-    ser& h100_out;
-    ser& h101_out;
-    ser& h110_out;
-    ser& h111_out;
-
-    std::cout << "Internal value for t1: " << t1_out->value << std::endl;
-    std::cout << std::endl;
-    t1_out->value = 100;
-
-    (*h000_out)();
-    std::cout << std::endl;
-
-    (*h001_out)();
-    std::cout << std::endl;
-
-    (*h010_out)(52);
-    std::cout << std::endl;
-
-    (*h011_out)(53);
-    std::cout << std::endl;
-
-    ret = (*h100_out)();
-    std::cout << "Return value: " << ret << std::endl;
-    std::cout << std::endl;
-
-    ret = (*h101_out)();
-    std::cout << "Return value: " << ret << std::endl;
-    std::cout << std::endl;
-
-    ret = (*h110_out)(62);
-    std::cout << "Return value: " << ret << std::endl;
-    std::cout << std::endl;
-
-    ret = (*h111_out)(63);
-    std::cout << "Return value: " << ret << std::endl;
-    std::cout << std::endl;
-
-
-    // Test recursive serialization using handlers (i.e. the handler
-    // points to the enclosing class
-    RecursiveSerializationTest* rst = new RecursiveSerializationTest(73);
-    (*rst->handler)(17);
-
-    ser.start_sizing();
-    ser& rst;
-
-    size   = ser.size();
-    buffer = new char[size + 10];
-
-    // Serialize
-    ser.start_packing(buffer, size);
-
-    ser& rst;
-
-    RecursiveSerializationTest* rst_out;
-    ser.start_unpacking(buffer, size);
-    ser& rst_out;
-
-    (*rst_out->handler)(17);
+        info2.test_printComponentInfoHierarchy();
+    }
+    else {
+        out.fatal(CALL_INFO_LONG, 1, "ERROR: Unknown serialization test specified: %s\n", test.c_str());
+    }
 }
 
 

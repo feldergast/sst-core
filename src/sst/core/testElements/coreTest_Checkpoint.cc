@@ -21,26 +21,23 @@ using namespace SST::CoreTestCheckpoint;
 coreTestCheckpoint::coreTestCheckpoint(ComponentId_t id, Params& params) : Component(id)
 {
     bool starter = params.find<bool>("starter", true);
-    if (starter) {
-        counter = params.find<uint32_t>("counter", 1000);
-    } else {
+    if ( starter ) { counter = params.find<uint32_t>("counter", 1000); }
+    else {
         counter = 0;
     }
     registerAsPrimaryComponent();
     primaryComponentDoNotEndSim();
-    
+
     link = configureLink("port", new Event::Handler<coreTestCheckpoint>(this, &coreTestCheckpoint::handleEvent));
     sst_assert(link, CALL_INFO, -1, "Could not configure link");
 }
 
-coreTestCheckpoint::~coreTestCheckpoint()
-{
-}
+coreTestCheckpoint::~coreTestCheckpoint() {}
 
-void coreTestCheckpoint::setup()
+void
+coreTestCheckpoint::setup()
 {
-    if (counter > 0)
-        link->send(new coreTestCheckpointEvent(counter));
+    if ( counter > 0 ) link->send(new coreTestCheckpointEvent(counter));
 }
 
 // incoming event is bounced back after decrementing its counter
@@ -49,12 +46,13 @@ void
 coreTestCheckpoint::handleEvent(Event* ev)
 {
     coreTestCheckpointEvent* event = static_cast<coreTestCheckpointEvent*>(ev);
-    
-    if (event->decCount()) {
+
+    if ( event->decCount() ) {
         getSimulationOutput().output("%s, OK to end simulation\n", getName().c_str());
         primaryComponentOKToEndSim();
     }
-    getSimulationOutput().output("%s, bounce %d, t=%" PRIu64 "\n", getName().c_str(), event->getCount(), getCurrentSimCycle());
+    getSimulationOutput().output(
+        "%s, bounce %d, t=%" PRIu64 "\n", getName().c_str(), event->getCount(), getCurrentSimCycle());
     link->send(event);
 }
 

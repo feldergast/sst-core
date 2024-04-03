@@ -502,6 +502,11 @@ public:
     static std::unordered_map<std::thread::id, Simulation_impl*> instanceMap;
     static std::vector<Simulation_impl*>                         instanceVec;
 
+    /******** Checkpoint/restart tracking data structures ***********/
+    std::map<uintptr_t, Link*>     link_restart_tracking;
+    std::map<uintptr_t, uintptr_t> event_handler_restart_tracking;
+
+
     friend void wait_my_turn_start();
     friend void wait_my_turn_end();
 

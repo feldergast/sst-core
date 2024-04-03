@@ -65,6 +65,9 @@ EXTRA_DIST += \
     tests/refFiles/test_Links_dangling.out \
     tests/refFiles/test_Links_wrong_port.out \
     tests/refFiles/test_Serialization.out \
+    tests/refFiles/test_Serialization_componentinfo.out \
+    tests/refFiles/test_Serialization_default.out \
+    tests/refFiles/test_Serialization_handler.out \
     tests/refFiles/test_SubComponent_2.out \
     tests/refFiles/test_SubComponent.out \
     tests/refFiles/test_UnitAlgebra.out \

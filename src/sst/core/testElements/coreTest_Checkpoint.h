@@ -13,8 +13,8 @@
 #define SST_CORE_CORETEST_CHECKPOINT_H
 
 #include "sst/core/component.h"
-#include "sst/core/link.h"
 #include "sst/core/event.h"
+#include "sst/core/link.h"
 
 namespace SST {
 namespace CoreTestCheckpoint {
@@ -27,14 +27,14 @@ class coreTestCheckpointEvent : public SST::Event
 {
 public:
     coreTestCheckpointEvent() : SST::Event(), counter(1000) {}
-    
+
     coreTestCheckpointEvent(uint32_t c) : SST::Event(), counter(c) {}
-    
+
     ~coreTestCheckpointEvent() {}
-    
-    bool decCount() 
-    { 
-        if (counter != 0) counter--;
+
+    bool decCount()
+    {
+        if ( counter != 0 ) counter--;
         return counter == 0;
     }
 
@@ -43,10 +43,10 @@ public:
 private:
     uint32_t counter;
 
-    void serialize_order(SST::Core::Serialization::serializer &ser) override 
+    void serialize_order(SST::Core::Serialization::serializer& ser) override
     {
         Event::serialize_order(ser);
-        ser & counter;
+        ser& counter;
     }
 
     ImplementSerializable(SST::CoreTestCheckpoint::coreTestCheckpointEvent);
@@ -81,9 +81,9 @@ public:
 
 private:
     void handleEvent(SST::Event* ev);
-    
+
     SST::Link* link;
-    uint32_t counter;
+    uint32_t   counter;
 };
 
 } // namespace CoreTestCheckpoint
