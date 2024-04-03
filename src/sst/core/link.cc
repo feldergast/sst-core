@@ -59,7 +59,13 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
             // need to serialize (polling links not supported)
 
             Event::HandlerBase* handler = reinterpret_cast<Event::HandlerBase*>(s->delivery_info);
-            ser&                handler;
+
+            // Need to serialize both the uintptr_t (delivery_info)
+            // and the pointer because we'll need the numerical value
+            // of the pointer as a tag when restarting.
+            ser & s->delivery_info;
+            ser& handler;
+
             ser & s->defaultTimeBase;
             ser & s->latency;
             // s->pair_link not needed for SelfLinks
@@ -118,7 +124,13 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
             else {
                 // My handler is stored in my pair_link
                 Event::HandlerBase* handler = reinterpret_cast<Event::HandlerBase*>(s->pair_link->delivery_info);
-                ser&                handler;
+
+                // Need to serialize both the uintptr_t
+                // (delivery_info) and the pointer because we'll need
+                // the numerical value of the pointer as a tag when
+                // restarting.
+                ser & s->pair_link->delivery_info;
+                ser& handler;
             }
 
             ser & s->defaultTimeBase;
@@ -147,9 +159,15 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
             // send_queue will be recreated after deserialization, no
             // need to serialize (polling links not supported)
 
+            uintptr_t delivery_info;
+            ser&      delivery_info;
+
             Event::HandlerBase* handler;
             ser&                handler;
             s->delivery_info = reinterpret_cast<uintptr_t>(handler);
+
+            Simulation_impl::getSimulation()->event_handler_restart_tracking[delivery_info] = s->delivery_info;
+
             ser & s->defaultTimeBase;
             ser & s->latency;
             // s->pair_link not needed for SelfLinks
@@ -191,9 +209,14 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
 
             if ( s->type == Link::SYNC ) { ser & s->delivery_info; }
             else {
+                uintptr_t delivery_info;
+                ser&      delivery_info;
+
                 Event::HandlerBase* handler;
                 ser&                handler;
                 s->delivery_info = reinterpret_cast<uintptr_t>(handler);
+
+                Simulation_impl::getSimulation()->event_handler_restart_tracking[delivery_info] = s->delivery_info;
             }
 
             // If we have a pair link already, swap delivery_info
