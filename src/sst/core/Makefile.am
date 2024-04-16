@@ -21,6 +21,7 @@ nobase_dist_sst_HEADERS = \
 	activity.h \
 	clock.h \
 	baseComponent.h \
+	checkpointAction.h \
 	component.h \
 	componentExtension.h \
 	componentInfo.h \
@@ -92,11 +93,13 @@ nobase_dist_sst_HEADERS = \
 	serialization/serialize.h \
 	serialization/serialize_impl_fwd.h \
 	serialization/serialize_array.h \
+	serialization/serialize_atomic.h \
 	serialization/serialize_buffer_accessor.h \
 	serialization/serialize_deque.h \
 	serialization/serialize_list.h \
 	serialization/serialize_map.h \
 	serialization/serialize_packer.h \
+	serialization/serialize_priority_queue.h \
 	serialization/serialize_serializable.h \
 	serialization/serialize_set.h \
 	serialization/serialize_sizer.h \
@@ -160,6 +163,7 @@ sst_core_sources = \
 	action.cc \
 	clock.cc \
 	baseComponent.cc \
+	checkpointAction.cc \
 	component.cc \
 	componentExtension.cc \
 	componentInfo.cc \

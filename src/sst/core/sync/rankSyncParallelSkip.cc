@@ -483,4 +483,29 @@ RankSyncParallelSkip::deserializeMessage(comm_recv_pair* msg)
     deserializeTime += SST::Core::Profile::getElapsed(deserialStart);
 }
 
+void
+RankSyncParallelSkip::serialize_order(SST::Core::Serialization::serializer& ser)
+{
+    RankSync::serialize_order(ser);
+    ser& myNextSyncTime;
+    ser& mpiWaitTime;
+    ser& deserializeTime;
+    ser& send_count;
+    for ( uint32_t i = 0; i < num_ranks.thread; i++ )
+        ser& recv_count[i];
+
+    ser& comm_send_map;
+    ser& comm_recv_map;
+
+    // Unused
+    // link_map
+
+    //  No need to serialize
+    // remaining_deser
+    // queues (deserialize_queue, link_send_queue, serialize_queue, send_queue)
+    // barriers (serializeReadyBarrier, slaveExchangeDoneBarrier, allDoneBarrier)
+    // lock
+}
+
+
 } // namespace SST

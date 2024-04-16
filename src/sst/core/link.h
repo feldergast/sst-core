@@ -41,7 +41,7 @@ class SST::Core::Serialization::serialize_impl<Link*>
 {
     template <class A>
     friend class serialize;
-    // Function implemented in timeLord.cc
+    // Function implemented in link.cc
     void operator()(Link*& s, SST::Core::Serialization::serializer& ser);
 };
 

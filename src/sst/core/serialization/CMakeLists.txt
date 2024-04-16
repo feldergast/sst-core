@@ -25,6 +25,7 @@ set(SSTSerializationHeaders
     serialize_list.h
     serialize_map.h
     serialize_packer.h
+    serialize_priority_queue.h
     serializer_fwd.h
     serializer.h
     serialize_serializable.h

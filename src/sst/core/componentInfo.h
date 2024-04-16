@@ -168,7 +168,7 @@ public:
     ComponentInfo();
 
     /**
-       Funciton used to serialize the class
+       Function used to serialize the class
      */
     void serialize_order(SST::Core::Serialization::serializer& ser);
 

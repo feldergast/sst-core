@@ -41,12 +41,12 @@ namespace SST {
 #define STATALLFLAG            "--ALLSTATS--"
 
 class Activity;
+class CheckpointAction;
 class Component;
 class Config;
 class ConfigGraph;
 class Exit;
 class Factory;
-class SimulatorHeartbeat;
 class Link;
 class LinkMap;
 class Params;
@@ -311,6 +311,8 @@ public:
      */
     TimeConverter* minPartToTC(SimTime_t cycles) const;
 
+    void checkpoint();
+
     /** Factory used to generate the simulation components */
     static Factory* factory;
 
@@ -350,6 +352,7 @@ public:
     friend class SyncManager;
 
     TimeVortex*             timeVortex;
+    std::string             timeVortexType;
     TimeConverter*          threadMinPartTC;
     Activity*               current_activity;
     static SimTime_t        minPart;
@@ -505,6 +508,7 @@ public:
     /******** Checkpoint/restart tracking data structures ***********/
     std::map<uintptr_t, Link*>     link_restart_tracking;
     std::map<uintptr_t, uintptr_t> event_handler_restart_tracking;
+    CheckpointAction*              m_checkpoint;
 
 
     friend void wait_my_turn_start();

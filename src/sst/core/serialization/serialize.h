@@ -15,6 +15,7 @@
 #include "sst/core/serialization/serializer.h"
 #include "sst/core/warnmacros.h"
 
+#include <atomic>
 #include <iostream>
 #include <typeinfo>
 
@@ -328,9 +329,11 @@ operator|(serializer& ser, T& t)
 } // namespace SST
 
 #include "sst/core/serialization/serialize_array.h"
+#include "sst/core/serialization/serialize_atomic.h"
 #include "sst/core/serialization/serialize_deque.h"
 #include "sst/core/serialization/serialize_list.h"
 #include "sst/core/serialization/serialize_map.h"
+#include "sst/core/serialization/serialize_priority_queue.h"
 #include "sst/core/serialization/serialize_set.h"
 #include "sst/core/serialization/serialize_string.h"
 #include "sst/core/serialization/serialize_vector.h"

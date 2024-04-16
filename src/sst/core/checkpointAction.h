@@ -9,8 +9,8 @@
 // information, see the LICENSE file in the top level directory of the
 // distribution.
 
-#ifndef SST_CORE_HEARTBEAT_H
-#define SST_CORE_HEARTBEAT_H
+#ifndef SST_CORE_CHECKPOINT_ACTION_H
+#define SST_CORE_CHECKPOINT_ACTION_H
 
 #include "sst/core/action.h"
 #include "sst/core/config.h"
@@ -26,24 +26,24 @@ class Simulation_impl;
 class TimeConverter;
 
 /**
-  \class SimulatorHeartbeat
-    An optional heartbeat to show progress in a simulation
+  \class CheckpointAction
+    A recurring event to trigger checkpoint generation
 */
-class SimulatorHeartbeat : public Action
+class CheckpointAction : public Action
 {
 public:
     /**
-    Create a new heartbeat object for the simulation core to show progress
+    Create a new checkpoint object for the simulation core to initiate checkpoints
     */
-    SimulatorHeartbeat(Config* cfg, int this_rank, Simulation_impl* sim, TimeConverter* period);
-    ~SimulatorHeartbeat();
+    CheckpointAction(Config* cfg, int this_rank, Simulation_impl* sim, TimeConverter* period);
+    ~CheckpointAction();
 
-    NotSerializable(SST::SimulatorHeartbeat)
+    NotSerializable(SST::CheckpointAction) // Going to have to fix this
 
-        private : SimulatorHeartbeat() {};
-    SimulatorHeartbeat(const SimulatorHeartbeat&);
+        private : CheckpointAction() {};
+    CheckpointAction(const CheckpointAction&);
 
-    void           operator=(SimulatorHeartbeat const&);
+    void           operator=(CheckpointAction const&);
     void           execute(void) override;
     int            rank;
     TimeConverter* m_period;
@@ -52,4 +52,4 @@ public:
 
 } // namespace SST
 
-#endif // SST_CORE_HEARTBEAT_H
+#endif // SST_CORE_CHECKPOINT_ACTION_H

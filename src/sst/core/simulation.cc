@@ -14,6 +14,7 @@
 #include "sst/core/simulation_impl.h"
 // simulation_impl header should stay here
 
+#include "sst/core/checkpointAction.h"
 #include "sst/core/clock.h"
 #include "sst/core/config.h"
 #include "sst/core/configGraph.h"
@@ -184,15 +185,21 @@ Simulation_impl::Simulation_impl(Config* cfg, RankInfo my_rank, RankInfo num_ran
     Params p;
     // params get passed twice - both the params and a ctor argument
     direct_interthread = cfg->interthread_links();
-    std::string timevortex_type(cfg->timeVortex());
-    if ( direct_interthread && num_ranks.thread > 1 ) timevortex_type = timevortex_type + ".ts";
-    timeVortex = factory->Create<TimeVortex>(timevortex_type, p);
+    timeVortexType     = cfg->timeVortex();
+    if ( direct_interthread && num_ranks.thread > 1 ) timeVortexType = timeVortexType + ".ts";
+    timeVortex = factory->Create<TimeVortex>(timeVortexType, p);
     if ( my_rank.thread == 0 ) { m_exit = new Exit(num_ranks.thread, num_ranks.rank == 1); }
 
-    if ( cfg->heartbeatPeriod() != "" && my_rank.thread == 0 ) {
-        sim_output.output("# Creating simulation heartbeat at period of %s.\n", cfg->heartbeatPeriod().c_str());
+    if ( cfg->heartbeat_period() != "" && my_rank.thread == 0 ) {
+        sim_output.output("# Creating simulation heartbeat at period of %s.\n", cfg->heartbeat_period().c_str());
         m_heartbeat =
-            new SimulatorHeartbeat(cfg, my_rank.rank, this, timeLord.getTimeConverter(cfg->heartbeatPeriod()));
+            new SimulatorHeartbeat(cfg, my_rank.rank, this, timeLord.getTimeConverter(cfg->heartbeat_period()));
+    }
+
+    if ( cfg->checkpoint_period() != "" ) {
+        sim_output.output("# Creating simulation checkpoint at period of %s.\n", cfg->checkpoint_period().c_str());
+        m_checkpoint =
+            new CheckpointAction(cfg, my_rank.rank, this, timeLord.getTimeConverter(cfg->checkpoint_period()));
     }
 
     // Need to create the thread sync if there is more than one thread
@@ -1231,6 +1238,94 @@ Simulation_impl::intializeProfileTools(const std::string& config)
         }
     }
 #endif
+}
+
+void
+Simulation_impl::checkpoint()
+{
+    sim_output.output("Checkpoint triggered at time %" PRIu64 "\n", currentSimCycle);
+
+    printf("Printing original TV, size = %zu\n", timeVortex->getCurrentDepth());
+    timeVortex->dbg_print(sim_output);
+
+    SST::Core::Serialization::serializer ser;
+    ser.enable_pointer_tracking();
+
+    // Get the size
+    ser.start_sizing();
+    ser& timeVortex;
+
+    size_t size   = ser.size();
+    char*  buffer = new char[size + 10];
+
+    // Serialize
+    ser.start_packing(buffer, size);
+    ser& timeVortex;
+
+    // Unpack into a new thing
+    Params      p;
+    TimeVortex* test_tv;
+    ser.start_unpacking(buffer, size);
+    ser& test_tv;
+
+    printf("Printing new TV\n");
+    test_tv->dbg_print(sim_output);
+
+
+    /*
+     * State to checkpoint:
+        TimeVortex*             timeVortex; - yes but do it later
+        TimeConverter*          threadMinPartTC; - yes?
+        Activity*               current_activity; - no
+        static SimTime_t        minPart; - yes
+        static TimeConverter*   minPartTC; - yes
+        std::vector<SimTime_t>  interThreadLatencies; - yes
+        SimTime_t               interThreadMinLatency; - yes
+        SyncManager*            syncManager; - yes
+        ComponentInfoMap        compInfoMap; - yes
+        clockMap_t              clockMap; - yes
+        oneShotMap_t            oneShotMap; - yes, eventually
+        static Exit*            m_exit; - yes
+        SimulatorHeartbeat*     m_heartbeat; - yes
+        bool                    endSim; - yes
+        bool                    independent; - yes
+        static std::atomic<int> untimed_msg_count; - no, only valid in untimed phases?
+        unsigned int            untimed_phase; - no, only valid in untimed phases?
+        volatile sig_atomic_t   lastRecvdSignal; - no
+        ShutdownMode_t          shutdown_mode; - not sure if we need this
+        bool                    wireUpFinished; - yes
+        static TimeLord timeLord; - yes
+        static Output   sim_output; - yes
+        SST::Statistics::StatisticProcessingEngine stat_engine; - yes but not now
+        std::map<std::string, SST::Profile::ProfileTool*> profile_tools; - no
+        std::map<std::string, std::vector<std::string>>   profiler_map; - no
+        SimulationRunMode runMode; - yes??
+        SimTime_t currentSimCycle; - yes
+        int       currentPriority; - yes
+        SimTime_t endSimCycle; - i guess but probably don't need it
+        RankInfo my_rank; - yes
+        RankInfo num_ranks; - yes
+        std::string                 output_directory; - yes
+        static SharedRegionManager* sharedRegionManager; - yes...
+
+        double run_phase_start_time; - no
+        double run_phase_total_time; - no
+        double init_phase_start_time; - no
+        double init_phase_total_time; - no
+        double complete_phase_start_time; - no
+        double complete_phase_total_time; - no
+
+        static std::unordered_map<std::thread::id, Simulation_impl*> instanceMap; - no
+        static std::vector<Simulation_impl*>                         instanceVec; - no
+
+        std::map<uintptr_t, Link*>     link_restart_tracking; - no
+        std::map<uintptr_t, uintptr_t> event_handler_restart_tracking; - no
+        CheckpointAction*              m_checkpoint; - no
+    */
+    // Checkpointing!
+    // Create serializer
+    // SST::Core::Serialization::serializer ser;
+    // ser.enable_pointer_tracking();
 }
 
 void

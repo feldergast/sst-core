@@ -35,7 +35,7 @@ def initializeTestModule_SingleInstance(class_inst):
 
 ################################################################################
 
-class testcase_StatisticComponent(SSTTestCase):
+class testcase_Serialization(SSTTestCase):
 
     def initializeClass(self, testName):
         super(type(self), self).initializeClass(testName)
@@ -74,6 +74,9 @@ class testcase_StatisticComponent(SSTTestCase):
     def test_Serialization_component_info(self):
         self.serialization_test_template("componentinfo", False)
 
+    def test_Serialization_atomic(self):
+        self.serialization_test_template("atomic")
+
 #####
     def serialization_test_template(self, testtype, default_reffile = True):
 
@@ -89,7 +92,6 @@ class testcase_StatisticComponent(SSTTestCase):
         outfile = "{0}/test_Serialization_{1}.out".format(outdir,testtype)
 
         options = "--model-options=\"{0}\"".format(testtype)
-
         # Force serial run since the serialization is all done in-situ
         self.run_sst(sdlfile, outfile, num_ranks=1, num_threads=1, other_args=options)
 

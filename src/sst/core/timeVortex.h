@@ -14,6 +14,8 @@
 
 #include "sst/core/activityQueue.h"
 #include "sst/core/module.h"
+#include "sst/core/serialization/serialize_impl_fwd.h"
+#include "sst/core/simulation_impl.h"
 
 namespace SST {
 
@@ -43,9 +45,37 @@ public:
     virtual void     print(Output& out) const = 0;
     virtual uint64_t getMaxDepth() const { return max_depth; }
     virtual uint64_t getCurrentDepth() const = 0;
+    virtual void     dbg_print(Output& out) { print(out); }
+
+    virtual void serialize_order(SST::Core::Serialization::serializer& ser) { ser& max_depth; }
 
 protected:
     uint64_t max_depth;
+};
+
+template <>
+class SST::Core::Serialization::serialize_impl<TimeVortex*>
+{
+
+    template <class A>
+    friend class serialize;
+    void operator()(TimeVortex*& s, SST::Core::Serialization::serializer& ser)
+    {
+        switch ( ser.mode() ) {
+        case serializer::SIZER:
+        case serializer::PACK:
+            ser& Simulation_impl::getSimulation()->timeVortexType;
+            s->serialize_order(ser);
+            break;
+        case serializer::UNPACK:
+            std::string tv_type;
+            ser&        tv_type;
+            Params      p;
+            s = Factory::getFactory()->Create<TimeVortex>(tv_type, p);
+            s->serialize_order(ser);
+            break;
+        }
+    }
 };
 
 } // namespace SST

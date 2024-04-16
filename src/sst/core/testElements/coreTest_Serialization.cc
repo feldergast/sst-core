@@ -67,6 +67,27 @@ checkContainerSerializeDeserialize(T& data)
     return true;
 };
 
+// For ordered but non-iterable contaienrs
+template <typename T>
+bool
+checkNonIterableContainerSerializeDeserialize(T& data)
+{
+    auto buffer = SST::Comms::serialize(data);
+    T    result;
+    SST::Comms::deserialize(buffer, result);
+
+    if ( data.size() != result.size() ) return false;
+
+    while ( !data.empty() ) {
+        auto data_val   = data.top();
+        auto result_val = result.top();
+        if ( data_val != result_val ) return false;
+        data.pop();
+        result.pop();
+    }
+    return true;
+};
+
 // For unordered containers
 template <typename T>
 bool
@@ -320,6 +341,12 @@ coreTestSerialization::coreTestSerialization(ComponentId_t id, Params& params) :
             deque_in.push_back(rng->generateNextInt32());
         passed = checkContainerSerializeDeserialize(deque_in);
         if ( !passed ) out.output("ERROR: deque<int32_t> did not serialize/deserialize properly\n");
+
+        std::priority_queue<int32_t> priority_queue_in;
+        for ( int i = 0; i < 10; ++i )
+            priority_queue_in.push(rng->generateNextInt32());
+        passed = checkNonIterableContainerSerializeDeserialize(priority_queue_in);
+        if ( !passed ) out.output("ERROR: priority_queue<int32_t> did not serialize/deserialize properly\n");
     }
     else if ( test == "unordered_containers" ) {
         // Unordered Containers
@@ -629,7 +656,15 @@ coreTestSerialization::coreTestSerialization(ComponentId_t id, Params& params) :
 
         info2.test_printComponentInfoHierarchy();
     }
-    else {
+    else if ( test == "atomic" ) {
+        std::atomic<int32_t> atom(12);
+
+        auto buffer = SST::Comms::serialize(atom);
+        std::atomic<int32_t> result;
+        SST::Comms::deserialize(buffer, result);
+        passed = (atom.load() == result.load()) ? true : false;
+        if ( !passed ) out.output("ERROR: std::atomic<int32_t> did not serialize/deserialize properly\n");
+    } else {
         out.fatal(CALL_INFO_LONG, 1, "ERROR: Unknown serialization test specified: %s\n", test.c_str());
     }
 }

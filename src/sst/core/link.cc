@@ -89,7 +89,7 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
             // MULTI-PARELLEL RESTART: When supporting different
             // restart parallelism, will also need to store the rank
             // of the links in order to have unique identifies for
-            // each link.  For pair linnks on another rank, we will
+            // each link.  For pair links on another rank, we will
             // use the delivery_info field as the pointer part of the
             // tag (this is the uintptr_t representation of the link
             // pointer on the remote rank).  This will also require
