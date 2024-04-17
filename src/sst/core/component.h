@@ -94,6 +94,13 @@ public:
 
 protected:
     friend class SubComponent;
+
+private:
+    // For Serialization only
+    Component();
+
+    ImplementSerializable(SST::Component)
+    void serialize_order(SST::Core::Serialization::serializer& ser) override;
 };
 
 } // namespace SST

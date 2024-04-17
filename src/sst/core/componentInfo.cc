@@ -190,8 +190,8 @@ ComponentInfo::serialize_order(SST::Core::Serialization::serializer& ser)
     ser& parent_info;
     ser& const_cast<std::string&>(name);
     ser& const_cast<std::string&>(type);
-    // ser& link_map;
-    // ser& component;
+    ser& link_map;
+    ser& component;
 
     // Not used after construction, no need to serialize
     // ser& params;

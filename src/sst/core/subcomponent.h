@@ -59,6 +59,12 @@ public:
 
 private:
     friend class Component;
+
+    // For serialization only
+    SubComponent();
+
+    ImplementSerializable(SST::SubComponent)
+    void serialize_order(SST::Core::Serialization::serializer& ser) override;
 };
 
 namespace SUBCOMPONENT {

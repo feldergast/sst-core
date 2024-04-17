@@ -33,7 +33,10 @@
 
 namespace SST {
 
+BaseComponent::BaseComponent() : SST::Core::Serialization::serializable() {}
+
 BaseComponent::BaseComponent(ComponentId_t id) :
+    SST::Core::Serialization::serializable(),
     my_info(Simulation_impl::getSimulation()->getComponentInfo(id)),
     sim_(Simulation_impl::getSimulation()),
     isExtension(false)
@@ -106,11 +109,9 @@ BaseComponent::pushValidParams(Params& params, const std::string& type)
     params.pushAllowedKeys(keyset);
 }
 
-TimeConverter*
-BaseComponent::registerClock(const std::string& freq, Clock::HandlerBase* handler, bool regAll)
+void
+BaseComponent::registerClock_impl(TimeConverter* tc, Clock::HandlerBase* handler, bool regAll)
 {
-    TimeConverter* tc = sim_->registerClock(freq, handler, CLOCKPRIORITY);
-
     // Check to see if there is a profile tool installed
     auto tools = sim_->getProfileTool<Profile::ClockHandlerProfileTool>("clock");
 
@@ -126,6 +127,14 @@ BaseComponent::registerClock(const std::string& freq, Clock::HandlerBase* handle
         setDefaultTimeBaseForLinks(tc);
         my_info->defaultTimeBase = tc;
     }
+}
+
+
+TimeConverter*
+BaseComponent::registerClock(const std::string& freq, Clock::HandlerBase* handler, bool regAll)
+{
+    TimeConverter* tc = sim_->registerClock(freq, handler, CLOCKPRIORITY);
+    registerClock_impl(tc, handler, regAll);
     return tc;
 }
 
@@ -133,22 +142,7 @@ TimeConverter*
 BaseComponent::registerClock(const UnitAlgebra& freq, Clock::HandlerBase* handler, bool regAll)
 {
     TimeConverter* tc = sim_->registerClock(freq, handler, CLOCKPRIORITY);
-
-    // Check to see if there is a profile tool installed
-    auto tools = sim_->getProfileTool<Profile::ClockHandlerProfileTool>("clock");
-
-    for ( auto* tool : tools ) {
-        ClockHandlerMetaData mdata(my_info->getID(), getName(), getType());
-        // Add the receive profiler to the handler
-        handler->addProfileTool(tool, mdata);
-    }
-
-    // if regAll is true set tc as the default for the component and
-    // for all the links
-    if ( regAll ) {
-        setDefaultTimeBaseForLinks(tc);
-        my_info->defaultTimeBase = tc;
-    }
+    registerClock_impl(tc, handler, regAll);
     return tc;
 }
 
@@ -156,22 +150,7 @@ TimeConverter*
 BaseComponent::registerClock(TimeConverter* tc, Clock::HandlerBase* handler, bool regAll)
 {
     TimeConverter* tcRet = sim_->registerClock(tc, handler, CLOCKPRIORITY);
-
-    // Check to see if there is a profile tool installed
-    auto tools = sim_->getProfileTool<Profile::ClockHandlerProfileTool>("clock");
-
-    for ( auto* tool : tools ) {
-        ClockHandlerMetaData mdata(my_info->getID(), getName(), getType());
-        // Add the receive profiler to the handler
-        handler->addProfileTool(tool, mdata);
-    }
-
-    // if regAll is true set tc as the default for the component and
-    // for all the links
-    if ( regAll ) {
-        setDefaultTimeBaseForLinks(tcRet);
-        my_info->defaultTimeBase = tcRet;
-    }
+    registerClock_impl(tcRet, handler, regAll);
     return tcRet;
 }
 
@@ -831,5 +810,15 @@ BaseComponent::getComponentProfileTools(const std::string& point)
 {
     return sim_->getProfileTool<Profile::ComponentProfileTool>(point);
 }
+
+void
+BaseComponent::serialize_order(SST::Core::Serialization::serializer& ser)
+{
+    ser& my_info;
+    ser& isExtension;
+
+    if ( ser.mode() == SST::Core::Serialization::serializer::UNPACK ) { sim_ = Simulation_impl::getSimulation(); }
+}
+
 
 } // namespace SST

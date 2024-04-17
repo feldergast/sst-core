@@ -659,12 +659,13 @@ coreTestSerialization::coreTestSerialization(ComponentId_t id, Params& params) :
     else if ( test == "atomic" ) {
         std::atomic<int32_t> atom(12);
 
-        auto buffer = SST::Comms::serialize(atom);
+        auto                 buffer = SST::Comms::serialize(atom);
         std::atomic<int32_t> result;
         SST::Comms::deserialize(buffer, result);
         passed = (atom.load() == result.load()) ? true : false;
         if ( !passed ) out.output("ERROR: std::atomic<int32_t> did not serialize/deserialize properly\n");
-    } else {
+    }
+    else {
         out.fatal(CALL_INFO_LONG, 1, "ERROR: Unknown serialization test specified: %s\n", test.c_str());
     }
 }

@@ -1245,7 +1245,7 @@ Simulation_impl::checkpoint()
 {
     sim_output.output("Checkpoint triggered at time %" PRIu64 "\n", currentSimCycle);
 
-    printf("Printing original TV, size = %zu\n", timeVortex->getCurrentDepth());
+    printf("Printing original TV, size = %" PRIu64 "\n", timeVortex->getCurrentDepth());
     timeVortex->dbg_print(sim_output);
 
     SST::Core::Serialization::serializer ser;
