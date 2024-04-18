@@ -464,7 +464,7 @@ public:
     // Set whether to load from checkpoint
     static int setLoadFromCheckpoint(Config* cfg, const std::string& UNUSED(arg))
     {
-        if ( arg == "" ) { cfg->load_from_checkpoint_ = true; }
+        cfg->load_from_checkpoint_ = true;
         return 0;
     }
 
@@ -808,9 +808,10 @@ Config::insertOptions()
         "Set frequency for checkpoints to be generated (this is an approximate timing and specified in simulated "
         "time.\n ",
         std::bind(&ConfigHelper::setCheckpointPeriod, this, _1), true);
-    DEF_ARG(
-        "load-checkpoint", 0, "FILE", "Set file to load checkpoint from",
-        std::bind(&ConfigHelper::setLoadFromCheckpoint, this, _1), true);
+    DEF_FLAG(
+        "load-checkpoint", 0,
+        "Load checkpoint and continue simulation. Specified SDL file will be used as the checkpoint file.",
+        std::bind(&ConfigHelper::setLoadFromCheckpoint, this, _1), false);
 
     enableDashDashSupport(std::bind(&ConfigHelper::setModelOptions, this, _1));
     addPositionalCallback(std::bind(&Config::positionalCallback, this, _1, _2));

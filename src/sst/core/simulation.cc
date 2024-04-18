@@ -621,7 +621,7 @@ Simulation_impl::setup()
 }
 
 void
-Simulation_impl::run()
+Simulation_impl::prepare_for_run()
 {
     // Put a stop event at the end of the timeVortex. Simulation will
     // only get to this is there are no other events in the queue.
@@ -651,7 +651,11 @@ Simulation_impl::run()
     header += ", ";
     header += std::to_string(my_rank.thread);
     header += ":  ";
+}
 
+void
+Simulation_impl::run()
+{
 #if SST_PERFORMANCE_INSTRUMENTING
     std::string filename = "rank_" + std::to_string(my_rank.rank);
     filename += "_thread_" + std::to_string(my_rank.thread);

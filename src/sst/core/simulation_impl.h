@@ -183,6 +183,8 @@ public:
     /** Perform the setup() and run phases of the simulation. */
     void setup();
 
+    void prepare_for_run();
+
     void run();
 
     void finish();

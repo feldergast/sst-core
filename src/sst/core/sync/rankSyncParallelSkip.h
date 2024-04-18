@@ -71,7 +71,7 @@ private:
         char*      sbuf;
         uint32_t   remote_size;
 
-        void serialize_order(SST::Core::Serialization::serializer& ser)
+        void serialize_order(SST::Core::Serialization::serializer& ser) override
         {
             ser& to_rank;
             // squeue - empty so recreate on restart
@@ -92,7 +92,7 @@ private:
 #ifdef SST_CONFIG_HAVE_MPI
         MPI_Request req;
 #endif
-        void serialize_order(SST::Core::Serialization::serializer& ser)
+        void serialize_order(SST::Core::Serialization::serializer& ser) override
         {
             ser& remote_rank;
             ser& local_thread;
