@@ -41,6 +41,7 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
     // 1 - Link
     // 2 - SelfLink
     int16_t type;
+    printf("Link->serialize_impl %d\n", __LINE__);
 
     switch ( ser.mode() ) {
     case serializer::SIZER:
@@ -144,15 +145,19 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
         }
         break;
     case serializer::UNPACK:
+        printf("link->serialize_order UNPACK type %d\n", __LINE__);
         ser& type;
 
         // If we put in a nullptr, return a nullptr
         if ( type == 0 ) {
+            printf("link->serialize_order UNPACK type=0 %d\n", __LINE__);
             s = nullptr;
             return;
         }
 
         if ( type == 2 ) {
+            printf("link->serialize_order UNPACK type=1 %d\n", __LINE__);
+
             // Self link
             s = new SelfLink();
 
@@ -180,11 +185,14 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
             // ser & s->profile_tools;
         }
         else {
+            printf("link->serialize_order UNPACK type=2 %d\n", __LINE__);
+
             // Regular link
 
             // Pull out the tags for the two links
             uintptr_t my_tag;
             uintptr_t pair_tag;
+            printf("link->serialize_order UNPACK tags %d\n", __LINE__);
 
             ser& my_tag;
             ser& pair_tag;
@@ -202,6 +210,8 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
             else {
                 link_tracker[my_tag] = s;
             }
+
+            printf("link->serialize_order UNPACK %d\n", __LINE__);
 
             ser & s->type;
             ser & s->mode;
@@ -234,12 +244,14 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
             // no need to serialize
 
             // Need to recreate the send_queue
-            if ( s->pair_link->type == Link::SYNC ) {
+            /*if ( s->pair_link->type == Link::SYNC ) {
                 // TODO: Need to reregister with the SyncManager
             }
-            else {
+            else {*/
+                        printf("link->serialize_order UNPACK %d\n", __LINE__);
+
                 s->send_queue = Simulation_impl::getSimulation()->getTimeVortex();
-            }
+            //}
 
             // Profile tools not yet supported
             // ser & s->profile_tools;

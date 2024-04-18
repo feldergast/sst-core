@@ -135,7 +135,7 @@ public:
     SyncManager(
         const RankInfo& rank, const RankInfo& num_ranks, TimeConverter* minPartTC, SimTime_t min_part,
         const std::vector<SimTime_t>& interThreadLatencies);
-    SyncManager() {} // For serialization only
+    SyncManager(); // For serialization only
     virtual ~SyncManager();
 
     /** Register a Link which this Sync Object is responsible for */

@@ -70,6 +70,7 @@ class SST::Core::Serialization::serialize_impl<TimeVortex*>
         case serializer::UNPACK:
             std::string tv_type;
             ser&        tv_type;
+            printf("Creating time vortex type %s\n", tv_type.c_str());
             Params      p;
             s = Factory::getFactory()->Create<TimeVortex>(tv_type, p);
             s->serialize_order(ser);

@@ -68,6 +68,7 @@ public:
     SST_ELI_DOCUMENT_PARAMS(
         { "starter", "Whether this component initiates the ping-pong", "T"},
         { "count", "Number of times to bounce the message back and forth", "1000" },
+        { "teststring", "A test string", ""}
     )
 
     SST_ELI_DOCUMENT_PORTS(
@@ -78,12 +79,21 @@ public:
     ~coreTestCheckpoint();
 
     void setup();
+    
+    void printStatus(Output& out) override;
+
+    // Serialization functions and macro
+    coreTestCheckpoint() : Component() {} // For serialization only
+    void serialize_order(SST::Core::Serialization::serializer& ser) override;
+    ImplementSerializable(SST::CoreTestCheckpoint::coreTestCheckpoint)
 
 private:
     void handleEvent(SST::Event* ev);
 
     SST::Link* link;
-    uint32_t   counter;
+    uint32_t   counter; // Unused after setup
+    std::string testString; // Test that string got serialized
+
 };
 
 } // namespace CoreTestCheckpoint

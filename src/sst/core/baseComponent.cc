@@ -814,8 +814,13 @@ BaseComponent::getComponentProfileTools(const std::string& point)
 void
 BaseComponent::serialize_order(SST::Core::Serialization::serializer& ser)
 {
+    //printf("basecomponent = %p\n", my_info);
+    printf("BaseComponent->serialize_order %d\n", __LINE__);
     ser& my_info;
+    printf("BaseComponent->serialize_order %d\n", __LINE__);
     ser& isExtension;
+    printf("BaseComponent->serialize_order %d\n", __LINE__);
+
 
     if ( ser.mode() == SST::Core::Serialization::serializer::UNPACK ) { sim_ = Simulation_impl::getSimulation(); }
 }

@@ -43,16 +43,20 @@ public:
         }
         case serializer::UNPACK:
         {
+            printf("serialize_vector UNPACK %d\n", __LINE__);
             size_t s;
             ser.unpack(s);
+            printf("serialize_vector UNPACK size =%zu, %d\n", s, __LINE__);            
             v.resize(s);
             break;
         }
         }
-
+        
+        printf("serialize_vector UNPACK %d\n", __LINE__);
         for ( size_t i = 0; i < v.size(); ++i ) {
             ser& v[i];
         }
+        printf("serialize_vector UNPACK %d\n", __LINE__);
     }
 };
 

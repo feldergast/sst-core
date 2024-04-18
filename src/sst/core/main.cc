@@ -633,6 +633,8 @@ start_simulation(uint32_t tid, SimThreadInfo_t& info, Core::ThreadSafe::Barrier&
     else {
         // Do restart stuff
         printf("Made it to restart section\n");
+        sim->restart(info.config);
+        exit(-1);
     }
     /* Run Simulation */
     sim->run();

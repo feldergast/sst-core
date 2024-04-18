@@ -303,7 +303,7 @@ public:
     // To enable main to set up globals
     friend int ::main(int argc, char** argv);
 
-    // Simulation_impl() {}
+    Simulation_impl() {}
     Simulation_impl(Config* config, RankInfo my_rank, RankInfo num_ranks);
     Simulation_impl(Simulation_impl const&); // Don't Implement
     void operator=(Simulation_impl const&);  // Don't implement
@@ -314,6 +314,7 @@ public:
     TimeConverter* minPartToTC(SimTime_t cycles) const;
 
     void checkpoint();
+    void restart(Config* config);
 
     /** Factory used to generate the simulation components */
     static Factory* factory;
@@ -355,7 +356,7 @@ public:
 
     TimeVortex*             timeVortex;
     std::string             timeVortexType;
-    TimeConverter*          threadMinPartTC;
+    TimeConverter*          threadMinPartTC;    // Unused...?
     Activity*               current_activity;
     static SimTime_t        minPart;
     static TimeConverter*   minPartTC;
@@ -367,7 +368,7 @@ public:
     clockMap_t              clockMap;
     oneShotMap_t            oneShotMap;
     static Exit*            m_exit;
-    SimulatorHeartbeat*     m_heartbeat;
+    SimulatorHeartbeat*     m_heartbeat = nullptr;
     bool                    endSim;
     bool                    independent; // true if no links leave thread (i.e. no syncs required)
     static std::atomic<int> untimed_msg_count;
@@ -510,8 +511,10 @@ public:
     /******** Checkpoint/restart tracking data structures ***********/
     std::map<uintptr_t, Link*>     link_restart_tracking;
     std::map<uintptr_t, uintptr_t> event_handler_restart_tracking;
-    CheckpointAction*              m_checkpoint;
+    CheckpointAction*              m_checkpoint = nullptr;
+    uint32_t                       checkpoint_id = 0;
 
+    void printSimulationState();
 
     friend void wait_my_turn_start();
     friend void wait_my_turn_end();

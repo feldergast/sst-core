@@ -295,6 +295,11 @@ SyncManager::SyncManager(
     setPriority(SYNCPRIORITY);
 }
 
+SyncManager::SyncManager()
+{
+    sim = Simulation_impl::getSimulation();
+}
+
 SyncManager::~SyncManager() {}
 
 /** Register a Link which this Sync Object is responsible for */
@@ -461,16 +466,22 @@ SyncManager::addProfileTool(Profile::SyncProfileTool* tool)
 void
 SyncManager::serialize_order(SST::Core::Serialization::serializer& ser)
 {
+    printf("Zero part OK...");
+
     Action::serialize_order(ser);
 
     // AHHHHHHHHHHHHHHHHH
     ser& rank;      // const causes problems
     ser& num_ranks; // const again
+    printf("First part OK...");
 
     ser& next_rankSync;
     ser& threadSync;
+    printf("Second part OK...");
+
     ser& next_sync_type;
     ser& min_part;
+    printf("Third part OK...?!");
 
     // No need to serialize
     // RankExecBarrier

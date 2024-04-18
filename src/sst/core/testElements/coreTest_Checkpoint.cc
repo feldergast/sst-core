@@ -28,8 +28,10 @@ coreTestCheckpoint::coreTestCheckpoint(ComponentId_t id, Params& params) : Compo
     registerAsPrimaryComponent();
     primaryComponentDoNotEndSim();
 
-    link = configureLink("port", new Event::Handler<coreTestCheckpoint>(this, &coreTestCheckpoint::handleEvent));
+    link = configureLink("port", new Event::Handler2<coreTestCheckpoint, &coreTestCheckpoint::handleEvent>(this));
     sst_assert(link, CALL_INFO, -1, "Could not configure link");
+
+    testString = params.find<std::string>("teststring", "");
 }
 
 coreTestCheckpoint::~coreTestCheckpoint() {}
@@ -55,6 +57,24 @@ coreTestCheckpoint::handleEvent(Event* ev)
         "%s, bounce %d, t=%" PRIu64 "\n", getName().c_str(), event->getCount(), getCurrentSimCycle());
     link->send(event);
 }
+
+
+void
+coreTestCheckpoint::printStatus(Output& out)
+{
+    out.output("Component Status: %s, %p, %" PRIu32 ", %s\n", 
+        getName().c_str(), link, counter, testString.c_str());
+}
+
+
+void 
+coreTestCheckpoint::serialize_order(SST::Core::Serialization::serializer& ser)
+{
+    SST::Component::serialize_order(ser);
+    ser& link;
+    ser& counter;
+}
+
 
 
 // Element Libarary / Serialization stuff

@@ -186,4 +186,27 @@ Exit::check()
     // }
 }
 
+void
+Exit::serialize_order(SST::Core::Serialization::serializer& ser)
+{
+    Action::serialize_order(ser);
+
+    ser& num_threads;
+    
+    if (ser.mode() == SST::Core::Serialization::serializer::UNPACK) {
+        m_thread_counts = new unsigned int[num_threads];
+    }
+
+    for (int i = 0; i < num_threads; i++) {
+        ser& m_thread_counts[i];
+    }
+
+    ser& m_refCount;
+    ser& global_count;
+    ser& m_idSet;
+    ser& end_time;
+    ser& single_rank;
+
+    }
+
 } // namespace SST

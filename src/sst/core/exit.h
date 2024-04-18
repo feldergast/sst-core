@@ -95,20 +95,7 @@ public:
      * TODO to enable different partitioning on restart, will need to associate m_thread_counts and
      * m_idSet back to components so that a new Exit event can be generated on restart
      */
-    void serialize_order(SST::Core::Serialization::serializer& ser) override
-    {
-        Action::serialize_order(ser);
-        ser& num_threads;
-        for ( unsigned int i = 0; i < m_refCount; i++ ) {
-            ser& m_thread_counts[i];
-        }
-        ser& m_refCount;
-        ser& global_count;
-        ser& m_idSet;
-        ser& end_time;
-        ser& single_rank;
-        // TBD spinlock -> can re-create
-    }
+    void serialize_order(SST::Core::Serialization::serializer& ser) override;
     ImplementSerializable(SST::Exit)
 private:
     Exit() {}                    // for serialization only

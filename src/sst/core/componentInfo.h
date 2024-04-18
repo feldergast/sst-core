@@ -308,6 +308,11 @@ public:
         }
         dataByID.clear();
     }
+
+    size_t size()
+    {
+        return dataByID.size();
+    }
 };
 
 } // namespace SST

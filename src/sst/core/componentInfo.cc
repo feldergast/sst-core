@@ -186,12 +186,19 @@ ComponentInfo::~ComponentInfo()
 void
 ComponentInfo::serialize_order(SST::Core::Serialization::serializer& ser)
 {
+    printf("componentInfo->serialize_order id %d\n", __LINE__);
     ser& const_cast<ComponentId_t&>(id);
+    printf("componentInfo->serialize_order parent_info %d\n", __LINE__);
     ser& parent_info;
+    printf("componentInfo->serialize_order name %d\n", __LINE__);
     ser& const_cast<std::string&>(name);
+    printf("componentInfo->serialize_type %d\n", __LINE__);
     ser& const_cast<std::string&>(type);
+    printf("componentInfo->serialize_order link_map %d\n", __LINE__);
     ser& link_map;
+    printf("componentInfo->serialize_order component %d\n", __LINE__);
     ser& component;
+    printf("componentInfo->serialize_order defaultTimeBase %d\n", __LINE__);
 
     // Not used after construction, no need to serialize
     // ser& params;
@@ -201,6 +208,7 @@ ComponentInfo::serialize_order(SST::Core::Serialization::serializer& ser)
     // ser& allStatConfig;
     // ser& statLoadLevel;
     // ser& coordinates;
+    printf("componentInfo->serialize_order subcomponent stuff %d\n", __LINE__);
     ser& subIDIndex;
     ser& const_cast<std::string&>(slot_name);
     ser& slot_num;
