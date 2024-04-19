@@ -33,6 +33,7 @@ namespace SST {
 void
 SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core::Serialization::serializer& ser)
 {
+    TraceFunction trace(CALL_INFO_LONG, false);
     // Need to treat Links and SelfLinks differently
     bool    self_link;
     // Type of link (Link is not polymorphic, so we can't use
@@ -41,7 +42,6 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
     // 1 - Link
     // 2 - SelfLink
     int16_t type;
-    printf("Link->serialize_impl %d\n", __LINE__);
 
     switch ( ser.mode() ) {
     case serializer::SIZER:
@@ -49,12 +49,14 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
         // If s is nullptr, just put in a 0
         if ( nullptr == s ) {
             type = 0;
+            trace.output("Link type = nullptr (%d)\n", type);
             ser& type;
             return;
         }
         self_link = (s == s->pair_link);
         if ( self_link ) {
             type = 2;
+            trace.output("Link type = SELF (%d)\n", type);
             ser& type;
             // send_queue will be recreated after deserialization, no
             // need to serialize (polling links not supported)
@@ -82,6 +84,7 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
             // Regular link
             type = 1;
             ser& type;
+            trace.output("Link type = REGULAR (%d)\n", type);
 
             // Need to put a uintptr_t in for my pointer and my pair's
             // pointer.  This will be used to identify link
@@ -102,14 +105,17 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
             // side).
             uintptr_t ptr = reinterpret_cast<uintptr_t>(s);
             ser&      ptr;
+            trace.output("My pointer tag = %lu\n", ptr);
             ptr = reinterpret_cast<uintptr_t>(s->pair_link);
             ser& ptr;
+            trace.output("My pair pointer tag = %lu\n", ptr);
 
             // Store some of the data we'll need to make decisions
             // during unpacking
             ser & s->type;
             ser & s->mode;
             ser & s->tag;
+            trace.output("type = %" PRIu16 ", mode = %" PRIu16 ":, tag = %" PRIu32 "\n", s->type, s->mode, s->tag);
 
             // send_queue will be recreated after deserialization, no
             // need to serialize (polling links not supported)
@@ -124,6 +130,11 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
             }
             else {
                 // My handler is stored in my pair_link
+
+                // First serialize the pointer tag so we can fix
+                // things up after restart
+                
+                // Now serialize the handler
                 Event::HandlerBase* handler = reinterpret_cast<Event::HandlerBase*>(s->pair_link->delivery_info);
 
                 // Need to serialize both the uintptr_t
@@ -131,6 +142,7 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
                 // the numerical value of the pointer as a tag when
                 // restarting.
                 ser & s->pair_link->delivery_info;
+                trace.output("delivery_info = %lu (stored in pair link)\n", s->pair_link->delivery_info);
                 ser& handler;
             }
 
@@ -145,21 +157,22 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
         }
         break;
     case serializer::UNPACK:
-        printf("link->serialize_order UNPACK type %d\n", __LINE__);
+        trace.output("link->serialize_order UNPACK type %d\n", __LINE__);
         ser& type;
 
         // If we put in a nullptr, return a nullptr
         if ( type == 0 ) {
-            printf("link->serialize_order UNPACK type=0 %d\n", __LINE__);
+            trace.output("Link type = nullptr (%d)\n", type);
             s = nullptr;
             return;
         }
 
         if ( type == 2 ) {
-            printf("link->serialize_order UNPACK type=1 %d\n", __LINE__);
+            trace.output("Link type = SELF (%d)\n", type);
 
             // Self link
             s = new SelfLink();
+            ser.report_new_pointer(reinterpret_cast<uintptr_t>(s));
 
             // send_queue will be recreated after deserialization, no
             // need to serialize (polling links not supported)
@@ -185,19 +198,21 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
             // ser & s->profile_tools;
         }
         else {
-            printf("link->serialize_order UNPACK type=2 %d\n", __LINE__);
+            trace.output("Link type = REGULAR (%d)\n", type);
 
             // Regular link
 
             // Pull out the tags for the two links
             uintptr_t my_tag;
             uintptr_t pair_tag;
-            printf("link->serialize_order UNPACK tags %d\n", __LINE__);
 
             ser& my_tag;
+            trace.output("My pointer tag = %lu\n", my_tag);
             ser& pair_tag;
+            trace.output("My pair pointer tag = %lu\n", pair_tag);
 
             s               = new Link();
+            ser.report_new_pointer(reinterpret_cast<uintptr_t>(s));
             Link* pair_link = nullptr;
 
             // Need to check to see if my pair link has been unpacked
@@ -211,16 +226,17 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
                 link_tracker[my_tag] = s;
             }
 
-            printf("link->serialize_order UNPACK %d\n", __LINE__);
 
             ser & s->type;
             ser & s->mode;
             ser & s->tag;
+            trace.output("type = %" PRIu16 ", mode = %" PRIu16 ":, tag = %" PRIu32 "\n", s->type, s->mode, s->tag);
 
             if ( s->type == Link::SYNC ) { ser & s->delivery_info; }
             else {
                 uintptr_t delivery_info;
                 ser&      delivery_info;
+                trace.output("delivery_info = %lu\n", delivery_info);
 
                 Event::HandlerBase* handler;
                 ser&                handler;
@@ -248,7 +264,7 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
                 // TODO: Need to reregister with the SyncManager
             }
             else {*/
-                        printf("link->serialize_order UNPACK %d\n", __LINE__);
+                        trace.output("link->serialize_order UNPACK %d\n", __LINE__);
 
                 s->send_queue = Simulation_impl::getSimulation()->getTimeVortex();
             //}

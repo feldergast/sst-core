@@ -48,7 +48,8 @@ std::FILE*  Output::m_sstGlobalSimFileHandle      = nullptr;
 uint32_t    Output::m_sstGlobalSimFileAccessCount = 0;
 
 std::unordered_map<std::thread::id, uint32_t> Output::m_threadMap;
-RankInfo                                      Output::m_worldSize;
+int                                           Output::m_worldSize_ranks;
+int                                           Output::m_worldSize_threads;
 int                                           Output::m_mpiRank = 0;
 
 Output::Output(
@@ -472,7 +473,7 @@ Output::outputprintf(const char* format, va_list arg) const
 int
 Output::getMPIWorldSize() const
 {
-    return m_worldSize.rank;
+    return m_worldSize_ranks;
 }
 
 int
@@ -484,7 +485,7 @@ Output::getMPIWorldRank() const
 uint32_t
 Output::getNumThreads() const
 {
-    return m_worldSize.thread;
+    return m_worldSize_threads;
 }
 
 uint32_t

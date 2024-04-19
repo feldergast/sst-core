@@ -186,19 +186,19 @@ ComponentInfo::~ComponentInfo()
 void
 ComponentInfo::serialize_order(SST::Core::Serialization::serializer& ser)
 {
-    printf("componentInfo->serialize_order id %d\n", __LINE__);
+    TraceFunction trace(CALL_INFO_LONG, false);
     ser& const_cast<ComponentId_t&>(id);
-    printf("componentInfo->serialize_order parent_info %d\n", __LINE__);
+    trace.output("id = %" PRIu64 "\n", id);
     ser& parent_info;
-    printf("componentInfo->serialize_order name %d\n", __LINE__);
+    trace.output("parent_info=%p\n", parent_info);
     ser& const_cast<std::string&>(name);
-    printf("componentInfo->serialize_type %d\n", __LINE__);
+    trace.output("name = %s\n", name.c_str());
     ser& const_cast<std::string&>(type);
-    printf("componentInfo->serialize_order link_map %d\n", __LINE__);
+    trace.output("type = %s\n", type.c_str());
     ser& link_map;
-    printf("componentInfo->serialize_order component %d\n", __LINE__);
+    trace.output("componentInfo->serialize_order component %d\n", __LINE__);
     ser& component;
-    printf("componentInfo->serialize_order defaultTimeBase %d\n", __LINE__);
+    trace.output("componentInfo->serialize_order defaultTimeBase %d\n", __LINE__);
 
     // Not used after construction, no need to serialize
     // ser& params;
@@ -208,7 +208,7 @@ ComponentInfo::serialize_order(SST::Core::Serialization::serializer& ser)
     // ser& allStatConfig;
     // ser& statLoadLevel;
     // ser& coordinates;
-    printf("componentInfo->serialize_order subcomponent stuff %d\n", __LINE__);
+    trace.output("componentInfo->serialize_order subcomponent stuff %d\n", __LINE__);
     ser& subIDIndex;
     ser& const_cast<std::string&>(slot_name);
     ser& slot_num;

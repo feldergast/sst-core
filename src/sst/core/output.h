@@ -22,7 +22,6 @@
 #ifndef __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS
 #endif
-#include "sst/core/rankInfo.h"
 
 #include <cinttypes>
 #include <cstdio>
@@ -500,9 +499,10 @@ private:
         return getDefaultObject();
     }
 
-    static void setWorldSize(const RankInfo& ri, int mpiRank)
+    static void setWorldSize(int num_ranks, int num_threads, int mpiRank)
     {
-        m_worldSize = ri;
+        m_worldSize_ranks = num_ranks;
+        m_worldSize_threads = num_threads;
         m_mpiRank   = mpiRank;
     }
 
@@ -544,7 +544,9 @@ private:
     uint32_t    m_sstLocalFileAccessCount;
 
     static std::unordered_map<std::thread::id, uint32_t> m_threadMap;
-    static RankInfo                                      m_worldSize;
+    static int                                           m_worldSize_ranks;
+    static int                                           m_worldSize_threads;
+    // static RankInfo                                      m_worldSize;
     static int                                           m_mpiRank;
 };
 

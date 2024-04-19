@@ -36,12 +36,12 @@ private:
 
     void serialize_order(SST::Core::Serialization::serializer& ser)
     {
-
-        printf("LinkMap->serialize_order %d\n", __LINE__);
+        TraceFunction trace(CALL_INFO_LONG, false);
+        trace.output("LinkMap->serialize_order %d\n", __LINE__);
         ser& linkMap;
-        printf("LinkMap->serialize_order, %zu %d\n", __LINE__);
+        trace.output("linkMap.size() = %zu\n", linkMap.size());
         ser& selfPorts;
-        printf("LinkMap->serialize_order, %zu %d\n", __LINE__);
+        trace.output("LinkMap->serialize_order, %d\n", __LINE__);
     }
 
 

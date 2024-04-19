@@ -771,7 +771,7 @@ main(int argc, char* argv[])
     world_size.thread = cfg.num_threads();
 
     /* Build objects needed for startup */
-    Output::setWorldSize(world_size, myrank);
+    Output::setWorldSize(world_size.rank, world_size.thread, myrank);
     g_output = Output::setDefaultObject(cfg.output_core_prefix(), cfg.verbose(), 0, Output::STDOUT);
 
     g_output.verbose(
