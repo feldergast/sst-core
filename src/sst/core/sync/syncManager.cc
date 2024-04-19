@@ -298,6 +298,8 @@ SyncManager::SyncManager(
 SyncManager::SyncManager()
 {
     sim = Simulation_impl::getSimulation();
+    // threadSync = new EmptyThreadSync(Simulation_impl::getSimulation());
+    // rankSync = new EmptyRankSync(num_ranks);
 }
 
 SyncManager::~SyncManager() {}
@@ -479,6 +481,12 @@ SyncManager::serialize_order(SST::Core::Serialization::serializer& ser)
 
     ser& next_sync_type;
     ser& min_part;
+
+    // FIXME: Need to actually figure out how to handle the static
+    // RankSync object.
+    if ( ser.mode() == SST::Core::Serialization::serializer::UNPACK ) {
+        rankSync = new EmptyRankSync(num_ranks);
+    }
 
     // No need to serialize
     // RankExecBarrier

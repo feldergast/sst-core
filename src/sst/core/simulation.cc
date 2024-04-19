@@ -691,6 +691,7 @@ Simulation_impl::run()
         currentPriority = current_activity->getPriority();
         // printf("%s\n", current_activity->toString().c_str());
         current_activity->execute();
+        // fflush(stdout);
 
 #if SST_PERIODIC_PRINT
         periodicCounter++;
