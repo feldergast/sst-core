@@ -70,9 +70,12 @@ coreTestCheckpoint::printStatus(Output& out)
 void 
 coreTestCheckpoint::serialize_order(SST::Core::Serialization::serializer& ser)
 {
+    TraceFunction trace(CALL_INFO_LONG, false);
     SST::Component::serialize_order(ser);
     ser& link;
+    trace.output("link = %p\n", link);
     ser& counter;
+    trace.output("counter = %" PRIu32 "\n", counter);
 }
 
 

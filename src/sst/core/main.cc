@@ -634,7 +634,11 @@ start_simulation(uint32_t tid, SimThreadInfo_t& info, Core::ThreadSafe::Barrier&
         // Do restart stuff
         printf("Made it to restart section\n");
         sim->restart(info.config);
-        exit(-1);
+        Output& out = sim->getSimulationOutput();
+        out.output("Printing mempool contents:\n");
+        MemPoolAccessor::printUndeletedMemPoolItems("", out);
+        out.output("Done printing mempool contents\n");
+        // exit(-1);
     }
     /* Run Simulation */
     sim->run();

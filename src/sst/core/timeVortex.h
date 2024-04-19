@@ -15,11 +15,11 @@
 #include "sst/core/activityQueue.h"
 #include "sst/core/module.h"
 #include "sst/core/serialization/serialize_impl_fwd.h"
-#include "sst/core/simulation_impl.h"
 
 namespace SST {
 
 class Output;
+class Simulation_impl;
 
 /**
  * Primary Event Queue
@@ -31,7 +31,7 @@ public:
     SST_ELI_DECLARE_INFO_EXTERN(ELI::ProvidesParams)
     SST_ELI_DECLARE_CTOR_EXTERN(SST::Params&)
 
-    TimeVortex() { max_depth = MAX_SIMTIME_T; }
+    TimeVortex();
     ~TimeVortex() {}
 
     // Inherited from ActivityQueue
@@ -47,11 +47,27 @@ public:
     virtual uint64_t getCurrentDepth() const = 0;
     virtual void     dbg_print(Output& out) { print(out); }
 
+    // Functions for checkpointing
     virtual void serialize_order(SST::Core::Serialization::serializer& ser) { ser& max_depth; }
-
+    virtual void fixup_handlers() {}
+    
 protected:
     uint64_t max_depth;
+    
+    void fixup(Activity* act);
+
+private:
+    Simulation_impl* sim_ = nullptr;
 };
+
+namespace TV {
+namespace pvt {
+
+void pack_timevortex(TimeVortex*& s, SST::Core::Serialization::serializer& ser);
+void unpack_timevortex(TimeVortex*& s, SST::Core::Serialization::serializer& ser);
+
+} // namespace pvt
+} // namespace TV
 
 template <>
 class SST::Core::Serialization::serialize_impl<TimeVortex*>
@@ -64,16 +80,10 @@ class SST::Core::Serialization::serialize_impl<TimeVortex*>
         switch ( ser.mode() ) {
         case serializer::SIZER:
         case serializer::PACK:
-            ser& Simulation_impl::getSimulation()->timeVortexType;
-            s->serialize_order(ser);
+            TV::pvt::pack_timevortex(s, ser);
             break;
         case serializer::UNPACK:
-            std::string tv_type;
-            ser&        tv_type;
-            printf("Creating time vortex type %s\n", tv_type.c_str());
-            Params      p;
-            s = Factory::getFactory()->Create<TimeVortex>(tv_type, p);
-            s->serialize_order(ser);
+            TV::pvt::unpack_timevortex(s, ser);
             break;
         }
     }

@@ -145,7 +145,8 @@ private:
     friend class NullEvent;
     friend class RankSync;
     friend class ThreadSync;
-
+    friend class TimeVortex;
+    
 
     /** Cause this event to fire */
     void execute(void) override;

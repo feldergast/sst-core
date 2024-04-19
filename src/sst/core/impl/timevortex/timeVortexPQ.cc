@@ -134,6 +134,16 @@ TimeVortexPQBase<TS>::serialize_order(SST::Core::Serialization::serializer& ser)
     ser& data;
 }
 
+template <bool TS>
+void
+TimeVortexPQBase<TS>::fixup_handlers()
+{
+    std::vector<Activity*>& act = getContainer(data);
+    for ( auto it = act.begin(); it != act.end(); it++ ) {
+        fixup(*it);
+    }    
+}
+
 class TimeVortexPQ : public TimeVortexPQBase<false>
 {
 public:

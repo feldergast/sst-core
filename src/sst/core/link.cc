@@ -218,11 +218,18 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
             // Need to check to see if my pair link has been unpacked
             auto& link_tracker = Simulation_impl::getSimulation()->link_restart_tracking;
             if ( link_tracker.count(pair_tag) ) {
+                trace.output("My pair link is already there\n");
                 pair_link = link_tracker[pair_tag];
                 link_tracker.erase(pair_tag);
+
+                // Set pair link
                 s->pair_link = pair_link;
+
+                // Set my neighbor's pair link
+                pair_link->pair_link = s;      
             }
             else {
+                trace.output("My pair link is not there, add myself to tracker\n");
                 link_tracker[my_tag] = s;
             }
 

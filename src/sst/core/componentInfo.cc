@@ -195,10 +195,10 @@ ComponentInfo::serialize_order(SST::Core::Serialization::serializer& ser)
     trace.output("name = %s\n", name.c_str());
     ser& const_cast<std::string&>(type);
     trace.output("type = %s\n", type.c_str());
-    ser& link_map;
-    trace.output("componentInfo->serialize_order component %d\n", __LINE__);
     ser& component;
     trace.output("componentInfo->serialize_order defaultTimeBase %d\n", __LINE__);
+    ser& link_map;
+    trace.output("componentInfo->serialize_order component %d\n", __LINE__);
 
     // Not used after construction, no need to serialize
     // ser& params;

@@ -132,6 +132,7 @@ Exit::getRefCount()
 void
 Exit::execute()
 {
+    TraceFunction trace(CALL_INFO_LONG, false);
     check();
 
     // Only gets put into queue once, no need to reschedule

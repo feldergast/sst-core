@@ -689,6 +689,7 @@ Simulation_impl::run()
 
         currentSimCycle = event_time;
         currentPriority = current_activity->getPriority();
+        // printf("%s\n", current_activity->toString().c_str());
         current_activity->execute();
 
 #if SST_PERIODIC_PRINT
@@ -735,6 +736,8 @@ Simulation_impl::run()
         }
 #endif
     }
+    printf("Left the run loop\n");
+    printf("Left the run loop\n");
 
     // Check to see if there was a time fault
     if ( time_fault ) {
@@ -1248,7 +1251,8 @@ Simulation_impl::intializeProfileTools(const std::string& config)
 void
 Simulation_impl::checkpoint()
 {
-    sim_output.output("Checkpoint triggered at time %" PRIu64 "\n", currentSimCycle);
+    TraceFunction trace(CALL_INFO_LONG, false);
+    trace.output("Checkpoint triggered at time %" PRIu64 "\n", currentSimCycle);
     printSimulationState();
     std::string checkpoint_filename = "sst_checkpoint_" + std::to_string(checkpoint_id) + ".bin"; 
     checkpoint_id++;
@@ -1274,10 +1278,11 @@ Simulation_impl::checkpoint()
     ser.start_packing(buffer, size);
     ser& libnames;
 
-    printf("Writing library blob: %zu bytes\n", size);
+    trace.output("Writing library blob: %zu bytes\n", size);
     fs.write(reinterpret_cast<const char*>(&size), sizeof(size));
     fs.write(buffer, size);
 
+    trace.output("Sizing\n");
     /* Serialize simulation_impl */
     // Size buffer
     ser.start_sizing();
@@ -1312,6 +1317,7 @@ Simulation_impl::checkpoint()
     }
 
     // Pack buffer
+    trace.output("Packing\n");
     ser.start_packing(buffer, size);
     ser& num_ranks;
     ser& my_rank;
@@ -1337,18 +1343,18 @@ Simulation_impl::checkpoint()
     ser& timeVortex;
 
     // Write buffer to file
-    printf("Writing global blob: %zu bytes\n", size);
+    trace.output("Writing global blob: %zu bytes\n", size);
     fs.write(reinterpret_cast<const char*>(&size), sizeof(size));
     fs.write(buffer, size);
 
     size = compInfoMap.size();
-    printf("Writing %zu components\n", size);
+    trace.output("Writing %zu components\n", size);
     fs.write(reinterpret_cast<const char*>(&size), sizeof(size));
 
     // Serialize component blobs individually
     for (auto comp = compInfoMap.begin(); comp != compInfoMap.end(); comp++ )
     {
-        printf("Writing component...\n");
+        trace.output("Writing component...\n");
         ser.start_sizing();
         ComponentInfo* compinfo = *comp;
         ser& compinfo;
@@ -1363,7 +1369,7 @@ Simulation_impl::checkpoint()
         ser.start_packing(buffer, size);
         ser& compinfo;
         
-        printf("Writing component blob: %zu bytes\n", size);
+        trace.output("Writing component blob: %zu bytes\n", size);
         fs.write(reinterpret_cast<const char*>(&size), sizeof(size));
         fs.write(buffer, size);
     }
@@ -1410,6 +1416,7 @@ Simulation_impl::checkpoint()
 void
 Simulation_impl::restart(Config* cfg)
 {
+    TraceFunction trace(CALL_INFO_LONG, false);
     size_t size, buffer_size;
     char*  buffer;
     SST::Core::Serialization::serializer ser;
@@ -1418,7 +1425,7 @@ Simulation_impl::restart(Config* cfg)
 
     /* Begin deserialization, libraries */
     fs.read(reinterpret_cast<char*>(&size), sizeof(size));
-    printf("Reading library blob: %zu bytes\n", size);
+    trace.output("Reading library blob: %zu bytes\n", size);
 
     buffer_size = size;
     buffer = new char[buffer_size];
@@ -1429,7 +1436,7 @@ Simulation_impl::restart(Config* cfg)
     ser& libnames;
     for (auto lib : libnames)
     {
-        printf("Restart load lib %s\n", lib.c_str());
+        trace.output("Restart load lib %s\n", lib.c_str());
     }
 
     /* Load libraries before anything else */
@@ -1437,7 +1444,7 @@ Simulation_impl::restart(Config* cfg)
 
     /* Now get the global blob */
     fs.read(reinterpret_cast<char*>(&size), sizeof(size));
-    printf("Reading global blob: %zu bytes\n", size);
+    trace.output("Reading global blob: %zu bytes\n", size);
     if (size > buffer_size) {
         delete [] buffer;
         buffer_size = size;
@@ -1450,7 +1457,7 @@ Simulation_impl::restart(Config* cfg)
     ser& num_ranks;
     ser& my_rank;
     ser& currentSimCycle;
-    printf("simcycle: %" PRIu64 "\n", currentSimCycle);
+    trace.output("simcycle: %" PRIu64 "\n", currentSimCycle);
     //ser& threadMinPartTC;
     ser& minPart;
     ser& minPartTC;
@@ -1458,35 +1465,35 @@ Simulation_impl::restart(Config* cfg)
     ser& interThreadMinLatency;
     ser& endSim;
     ser& independent;
-    printf("minpartc: %" PRIu64 "\n", minPartTC->getFactor());
+    trace.output("minpartc: %" PRIu64 "\n", minPartTC->getFactor());
     //ser& sim_output;
     ser& runMode;
     ser& currentPriority;
     ser& endSimCycle;
     ser& output_directory;
-    printf("outdir: %s\n", output_directory.c_str());
+    trace.output("outdir: %s\n", output_directory.c_str());
     ser& timeLord;
     // Actions that may also be in TV
     ser& m_exit;
-    printf("here3.1, %s\n", m_exit->toString().c_str());
+    trace.output("here3.1, %s\n", m_exit->toString().c_str());
     ser& syncManager;
-    printf("here3.2\n");
+    trace.output("here3.2\n");
     ser& m_heartbeat;
-    printf("here3.3\n");
+    trace.output("here3.3\n");
     // Last, get the timevortex
     ser& timeVortex;
-    printf("here4\n");
+    trace.output("here4\n");
 
     /* Extract components */
     size_t compCount;
     fs.read(reinterpret_cast<char*>(&compCount), sizeof(compCount));
-    printf("Reading %zu components\n", compCount);
+    trace.output("Reading %zu components\n", compCount);
 
     // Deserialize component blobs individually
     for (size_t comp = 0; comp < compCount; comp++)
     {
         fs.read(reinterpret_cast<char*>(&size), sizeof(size));
-        printf("Reading component blob: %zu bytes\n", size);
+        trace.output("Reading component blob: %zu bytes\n", size);
         if (size > buffer_size) {
             delete [] buffer;
             buffer_size = size;
@@ -1506,6 +1513,9 @@ Simulation_impl::restart(Config* cfg)
     delete [] buffer;
 
     printSimulationState();
+
+    // Need to clean up the handlers in the TimeVortex
+    timeVortex->fixup_handlers();
 }
 
 void

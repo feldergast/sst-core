@@ -78,7 +78,7 @@ public:
     coreTestCheckpoint(ComponentId_t id, SST::Params& params);
     ~coreTestCheckpoint();
 
-    void setup();
+    void setup() override;
     
     void printStatus(Output& out) override;
 
