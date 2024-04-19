@@ -13,6 +13,7 @@
 #define SST_CORE_OUTPUT_H
 
 #include <string.h>
+#include <vector>
 
 // UNCOMMENT OUT THIS LINE TO ENABLE THE DEBUG METHOD -OR_
 // CHOOSE THE --enable-debug OPTION DURING SST CONFIGURATION

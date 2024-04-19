@@ -1296,6 +1296,7 @@ Simulation_impl::checkpoint()
     ser& currentPriority;
     ser& endSimCycle;
     ser& output_directory;
+    ser& timeLord;
     // Actions that may also be in TV
     ser& m_exit;
     ser& syncManager;
@@ -1327,6 +1328,7 @@ Simulation_impl::checkpoint()
     ser& currentPriority;
     ser& endSimCycle;
     ser& output_directory;
+    ser& timeLord;
     // Actions that may also be in TV
     ser& m_exit;
     ser& syncManager;
@@ -1463,6 +1465,7 @@ Simulation_impl::restart(Config* cfg)
     ser& endSimCycle;
     ser& output_directory;
     printf("outdir: %s\n", output_directory.c_str());
+    ser& timeLord;
     // Actions that may also be in TV
     ser& m_exit;
     printf("here3.1, %s\n", m_exit->toString().c_str());
@@ -1495,6 +1498,9 @@ Simulation_impl::restart(Config* cfg)
         ser& compInfo;
         compInfoMap.insert(compInfo);
     }   
+
+    /* Fix-up TimeLord */
+    timeLord.init(timeLord.timeBaseString);
 
     fs.close();
     delete [] buffer;
