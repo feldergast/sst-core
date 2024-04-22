@@ -751,6 +751,61 @@ main(int argc, char* argv[])
         return 0;
     }
 
+    // Check to see if we are doing a restart from a checkpoint
+    bool restart = cfg.load_from_checkpoint();
+    
+    // If restarting, update config from checkpoint
+    uint32_t cpt_num_threads, cpt_num_ranks;
+    if ( restart ) {
+        size_t size;
+        char*  buffer;
+        
+        SST::Core::Serialization::serializer ser;
+        ser.enable_pointer_tracking();
+        std::ifstream fs(cfg.configFile(), std::ios::binary);
+        if ( !fs.is_open() ) {
+            if ( fs.bad() ) {
+                fprintf(stderr, "Unable to open checkpoint file [%s]: badbit set\n", cfg.configFile().c_str());
+                return false;
+            }
+            if ( fs.fail() ) {
+                fprintf(stderr, "Unable to open checkpoint file [%s]: %s\n", cfg.configFile().c_str(), strerror(errno));
+                return false;
+            }
+            fprintf(stderr, "Unable to open checkpoint file [%s]: unknown error\n", cfg.configFile().c_str());
+            return false;
+        }
+
+        fs.read(reinterpret_cast<char*>(&size), sizeof(size));
+        buffer = new char[size];
+        fs.read(buffer, size);
+
+        std::string cpt_lib_path, cpt_timebase, cpt_output_directory;
+        std::string cpt_output_core_prefix, cpt_debug_file;
+        int cpt_output_verbose;
+
+        ser.start_unpacking(buffer, size);
+        ser& cpt_num_ranks;
+        ser& cpt_num_threads;
+        ser& cpt_lib_path;
+        ser& cpt_timebase;
+        ser& cpt_output_directory;
+        ser& cpt_output_core_prefix;
+        ser& cpt_output_verbose;
+        ser& cpt_debug_file;
+            
+        fs.close();
+        delete [] buffer;
+
+        // Error check that ranks & threads match after output is created
+        cfg.libpath_ = cpt_lib_path;
+        cfg.timeBase_ = cpt_timebase;
+        if ( !cfg.wasOptionSetOnCmdLine("output-directory") ) cfg.output_directory_ = cpt_output_directory;
+        if ( !cfg.wasOptionSetOnCmdLine("output-prefix-core") ) cfg.output_core_prefix_ = cpt_output_core_prefix;
+        if ( !cfg.wasOptionSetOnCmdLine("verbose") ) cfg.verbose_ = cpt_output_verbose;
+        if ( !cfg.wasOptionSetOnCmdLine("debug-file") ) cfg.debugFile_ = cpt_debug_file;
+    }
+
     // Set the debug output location
     Output::setFileName(cfg.debugFile() != "/dev/null" ? cfg.debugFile() : "sst_output");
 
@@ -765,9 +820,6 @@ main(int argc, char* argv[])
 
     // Create the factory.  This may be needed to load an external model definition
     Factory* factory = new Factory(cfg.getLibPath());
-
-    // Check to see if we are doing a restart from a checkpoint
-    bool restart = cfg.load_from_checkpoint();
 
     ////// Initialize global data //////
 
@@ -784,6 +836,13 @@ main(int argc, char* argv[])
 
     // Need to initialize TimeLord
     Simulation_impl::getTimeLord()->init(cfg.timeBase());
+
+    if ( restart && ( cfg.num_ranks() != cpt_num_ranks || cfg.num_threads() != cpt_num_threads ) ) {
+        g_output.fatal(
+            CALL_INFO, 1, "Rank or thread counts do not match checkpoint. "
+            "Checkpoint requires %" PRIu32 " ranks and %" PRIu32 " threads\n",
+            cpt_num_ranks, cpt_num_threads);
+    }
 
     ////// Start ConfigGraph Creation //////
 

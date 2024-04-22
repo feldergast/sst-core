@@ -148,6 +148,7 @@ Simulation_impl::createSimulation(Config* config, RankInfo my_rank, RankInfo num
     instanceVec.resize(num_ranks.thread);
     instanceVec[my_rank.thread] = instance;
     instance->intializeProfileTools(config->enabledProfiling());
+    
     return instance;
 }
 
@@ -179,7 +180,8 @@ Simulation_impl::Simulation_impl(Config* cfg, RankInfo my_rank, RankInfo num_ran
     init_phase_start_time(0.0),
     init_phase_total_time(0.0),
     complete_phase_start_time(0.0),
-    complete_phase_total_time(0.0)
+    complete_phase_total_time(0.0),
+    globalOutputFileName(cfg->debugFile())
 {
     sim_output.init(cfg->output_core_prefix(), cfg->verbose(), 0, Output::STDOUT);
     output_directory = cfg->output_directory();
@@ -1266,15 +1268,53 @@ Simulation_impl::checkpoint()
     size_t size, buffer_size;
     char* buffer;
 
-    /* Serialize loaded libraries */
+    /* Section 1: Config options */
+    ser.start_sizing();
+    ser& num_ranks.rank;
+    ser& num_ranks.thread;
+    std::string libpath = factory->getSearchPaths();
+    ser& libpath;
+    ser& timeLord.timeBaseString;
+    ser& output_directory;
+    std::string prefix = sim_output.getPrefix();
+    ser& prefix;
+    uint32_t verbose = sim_output.getVerboseLevel();
+    ser& verbose;
+    ser& globalOutputFileName;
+
+    size = ser.size();
+    buffer_size = size;
+    buffer = new char[buffer_size];
+    
+    ser.start_packing(buffer, size);
+    ser& num_ranks.rank;
+    ser& num_ranks.thread;
+    ser& libpath;
+    ser& timeLord.timeBaseString;
+    ser& output_directory;
+    ser& prefix;
+    ser& verbose;
+    ser& globalOutputFileName;
+
+    trace.output("Wrote checkpoint header (%zu bytes): %" PRIu32 ", %" PRIu32 ", '%s', '%s', "
+                "'%s', '%s', %" PRIu32 ", '%s'\n", size, num_ranks.rank, num_ranks.thread, libpath.c_str(), timebase.c_str(),
+                output_directory.c_str(), prefix.c_str(), verbose, globalOutputFileName.c_str());
+
+    fs.write(reinterpret_cast<const char*>(&size), sizeof(size));
+    fs.write(buffer, size);
+
+    /* Section 2: Loaded libraries */
     ser.start_sizing();
     std::set<std::string> libnames;
     factory->getLoadedLibraryNames(libnames);
     ser& libnames;
 
     size = ser.size();
-    buffer_size = size;
-    buffer = new char[size];
+    if ( size > buffer_size ) {
+        buffer_size = size;
+        delete [] buffer;
+        buffer = new char[buffer_size];
+    }
 
     ser.start_packing(buffer, size);
     ser& libnames;
@@ -1284,7 +1324,8 @@ Simulation_impl::checkpoint()
     fs.write(buffer, size);
 
     trace.output("Sizing\n");
-    /* Serialize simulation_impl */
+
+    /* Section 3: Simulation_impl */
     // Size buffer
     ser.start_sizing();
     ser& num_ranks;
@@ -1424,6 +1465,10 @@ Simulation_impl::restart(Config* cfg)
     ser.enable_pointer_tracking();
     std::ifstream fs(cfg->configFile(), std::ios::binary);
 
+    /* Skip config section, main did that already */
+    fs.read(reinterpret_cast<char*>(&size), sizeof(size));
+    fs.seekg(size, std::ios::cur);
+
     /* Begin deserialization, libraries */
     fs.read(reinterpret_cast<char*>(&size), sizeof(size));
     trace.output("Reading library blob: %zu bytes\n", size);
@@ -1485,6 +1530,12 @@ Simulation_impl::restart(Config* cfg)
     ser& timeVortex;
     trace.output("here4\n");
 
+    /* Fix-up global state before proceeding */
+    timeLord.init(timeLord.timeBaseString);
+    /*
+     * Need to correctly set the global filename from either CL or checkpoint
+     */
+
     /* Extract components */
     size_t compCount;
     fs.read(reinterpret_cast<char*>(&compCount), sizeof(compCount));
@@ -1507,8 +1558,6 @@ Simulation_impl::restart(Config* cfg)
         compInfoMap.insert(compInfo);
     }   
 
-    /* Fix-up TimeLord */
-    timeLord.init(timeLord.timeBaseString);
 
     fs.close();
     delete [] buffer;

@@ -509,10 +509,11 @@ public:
     static std::vector<Simulation_impl*>                         instanceVec;
 
     /******** Checkpoint/restart tracking data structures ***********/
-    std::map<uintptr_t, Link*>     link_restart_tracking;
-    std::map<uintptr_t, uintptr_t> event_handler_restart_tracking;
-    CheckpointAction*              m_checkpoint = nullptr;
-    uint32_t                       checkpoint_id = 0;
+    std::map<uintptr_t, Link*>      link_restart_tracking;
+    std::map<uintptr_t, uintptr_t>  event_handler_restart_tracking;
+    CheckpointAction*               m_checkpoint = nullptr;
+    uint32_t                        checkpoint_id = 0;
+    std::string                     globalOutputFileName = "";
 
     void printSimulationState();
 

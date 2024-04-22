@@ -49,7 +49,6 @@ CheckpointAction::execute(void)
     Simulation_impl* sim = Simulation_impl::getSimulation();
     const double     now = sst_get_cpu_time();
 
-    Output& sim_output = sim->getSimulationOutput();
     if ( 0 == rank ) {
         sim->getSimulationOutput().output(
             "# Simulation Checkpoint: Simulated Time %s (Real CPU time since last checkpoint %.5f seconds)\n",
