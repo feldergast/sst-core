@@ -68,7 +68,9 @@ public:
     SST_ELI_DOCUMENT_PARAMS(
         { "starter", "Whether this component initiates the ping-pong", "T"},
         { "count", "Number of times to bounce the message back and forth", "1000" },
-        { "teststring", "A test string", ""}
+        { "teststring", "A test string", ""},
+        { "clock_frequency", "Frequency for clock", "100kHz"},
+        { "clock_duty_cycle", "Number of cycles to keep clock on and off", "10"}
     )
 
     SST_ELI_DOCUMENT_PORTS(
@@ -79,7 +81,7 @@ public:
     ~coreTestCheckpoint();
 
     void setup() override;
-    
+
     void printStatus(Output& out) override;
 
     // Serialization functions and macro
@@ -89,11 +91,17 @@ public:
 
 private:
     void handleEvent(SST::Event* ev);
+    bool handleClock(Cycle_t cycle);
+    void restartClock(SST::Event* ev);
 
-    SST::Link* link;
-    uint32_t   counter; // Unused after setup
-    std::string testString; // Test that string got serialized
-
+    SST::Link*          link;
+    SST::Link*          self_link;
+    TimeConverter*      clock_tc;
+    Clock::HandlerBase* clock_handler;
+    int                 duty_cycle;       // Used to count clock on and off cycles
+    int                 duty_cycle_count; // Used to count clock on and off cycles
+    uint32_t            counter;          // Unused after setup
+    std::string         testString;       // Test that string got serialized
 };
 
 } // namespace CoreTestCheckpoint

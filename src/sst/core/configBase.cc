@@ -413,9 +413,7 @@ bool
 ConfigBase::wasOptionSetOnCmdLine(const std::string& name)
 {
     for ( auto& option : options ) {
-        if ( !name.compare(option.opt.name) ) {
-            return option.set_cmdline;
-        }
+        if ( !name.compare(option.opt.name) ) { return option.set_cmdline; }
     }
     return false;
 }

@@ -41,8 +41,7 @@ public:
     void serialize_order(SST::Core::Serialization::serializer& ser) override;
     ImplementSerializable(SST::SimulatorHeartbeat)
 
-private : 
-        
+private:
     SimulatorHeartbeat() {};
     SimulatorHeartbeat(const SimulatorHeartbeat&);
 

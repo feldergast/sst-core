@@ -484,9 +484,7 @@ SyncManager::serialize_order(SST::Core::Serialization::serializer& ser)
 
     // FIXME: Need to actually figure out how to handle the static
     // RankSync object.
-    if ( ser.mode() == SST::Core::Serialization::serializer::UNPACK ) {
-        rankSync = new EmptyRankSync(num_ranks);
-    }
+    if ( ser.mode() == SST::Core::Serialization::serializer::UNPACK ) { rankSync = new EmptyRankSync(num_ranks); }
 
     // No need to serialize
     // RankExecBarrier

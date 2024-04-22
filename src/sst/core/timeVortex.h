@@ -50,10 +50,10 @@ public:
     // Functions for checkpointing
     virtual void serialize_order(SST::Core::Serialization::serializer& ser) { ser& max_depth; }
     virtual void fixup_handlers() {}
-    
+
 protected:
     uint64_t max_depth;
-    
+
     void fixup(Activity* act);
 
 private:

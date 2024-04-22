@@ -282,6 +282,9 @@ public:
 
     TimeConverter* registerClock(TimeConverter* tcFreq, Clock::HandlerBase* handler, int priority);
 
+    // registerClock function used during checkpoint/restart
+    void registerClock(SimTime_t factor, Clock::HandlerBase* handler, int priority);
+
     /** Remove a clock handler from the list of active clock handlers */
     void unregisterClock(TimeConverter* tc, Clock::HandlerBase* handler, int priority);
 
@@ -292,6 +295,16 @@ public:
 
     /** Returns the next Cycle that the TImeConverter would fire. */
     Cycle_t getNextClockCycle(TimeConverter* tc, int priority = CLOCKPRIORITY);
+
+    /** Gets the clock the handler is registered with, represented by it's factor
+     *
+     * @param handler Clock handler to search for
+     *
+     * @return Factor of TimeConverter for the clock the specified
+     * handler is registered with.  If the handler is not currently
+     * registered with a clock, returns 0.
+     */
+    SimTime_t getClockForHandler(Clock::HandlerBase* handler);
 
     /** Return the Statistic Processing Engine associated with this Simulation */
     Statistics::StatisticProcessingEngine* getStatisticsProcessingEngine(void);
@@ -356,7 +369,7 @@ public:
 
     TimeVortex*             timeVortex;
     std::string             timeVortexType;
-    TimeConverter*          threadMinPartTC;    // Unused...?
+    TimeConverter*          threadMinPartTC; // Unused...?
     Activity*               current_activity;
     static SimTime_t        minPart;
     static TimeConverter*   minPartTC;
@@ -509,11 +522,11 @@ public:
     static std::vector<Simulation_impl*>                         instanceVec;
 
     /******** Checkpoint/restart tracking data structures ***********/
-    std::map<uintptr_t, Link*>      link_restart_tracking;
-    std::map<uintptr_t, uintptr_t>  event_handler_restart_tracking;
-    CheckpointAction*               m_checkpoint = nullptr;
-    uint32_t                        checkpoint_id = 0;
-    std::string                     globalOutputFileName = "";
+    std::map<uintptr_t, Link*>     link_restart_tracking;
+    std::map<uintptr_t, uintptr_t> event_handler_restart_tracking;
+    CheckpointAction*              m_checkpoint         = nullptr;
+    uint32_t                       checkpoint_id        = 0;
+    std::string                    globalOutputFileName = "";
 
     void printSimulationState();
 

@@ -6,12 +6,16 @@ sst.setProgramOption("checkpoint-period", "500us")
 comp_c0 = sst.Component("c0", "coreTestElement.coreTestCheckpoint")
 comp_c0.addParams({
       "starter" : 'T',
-      "counter" : 1000
+      "counter" : 1000,
+      "clock_frequency" : "100 kHz",
+      "clock_duty_cycle" : 20
 })
 
 comp_c1 = sst.Component("c1", "coreTestElement.coreTestCheckpoint")
 comp_c1.addParams({
       "starter" : 'F',
+      "clock_frequency" : "100 kHz",
+      "clock_duty_cycle" : 15
 })
 
 # Connect the components

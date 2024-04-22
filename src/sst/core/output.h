@@ -502,9 +502,9 @@ private:
 
     static void setWorldSize(int num_ranks, int num_threads, int mpiRank)
     {
-        m_worldSize_ranks = num_ranks;
+        m_worldSize_ranks   = num_ranks;
         m_worldSize_threads = num_threads;
-        m_mpiRank   = mpiRank;
+        m_mpiRank           = mpiRank;
     }
 
     static void setThreadID(std::thread::id mach, uint32_t user) { m_threadMap.insert(std::make_pair(mach, user)); }

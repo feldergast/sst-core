@@ -93,14 +93,13 @@ public:
     void primaryComponentOKToEndSim();
 
     void serialize_order(SST::Core::Serialization::serializer& ser) override;
-    ImplementSerializable(SST::Component)    
+    ImplementSerializable(SST::Component)
 
 protected:
     friend class SubComponent;
 
     // For Serialization only
     Component();
-
 };
 
 } // namespace SST

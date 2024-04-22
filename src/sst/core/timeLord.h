@@ -78,7 +78,7 @@ public:
 
     void serialize_order(SST::Core::Serialization::serializer& ser) override;
     ImplementSerializable(SST::TimeLord)
-    
+
 private:
     friend class SST::Simulation;
     friend class SST::Simulation_impl;

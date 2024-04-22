@@ -52,12 +52,12 @@ public:
             trace.output("UNPACK\n");
             size_t s;
             ser.unpack(s);
-            trace.output("vector size = %zu\n", s);            
+            trace.output("vector size = %zu\n", s);
             v.resize(s);
             break;
         }
         }
-        
+
         for ( size_t i = 0; i < v.size(); ++i ) {
             ser& v[i];
         }

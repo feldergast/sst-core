@@ -888,6 +888,10 @@ private:
     Simulation_impl* sim_        = nullptr;
     bool             isExtension = false;
 
+    // Need to track clock handlers for checkpointing.  We need to
+    // know what clock handlers we have registered with the core
+    std::vector<Clock::HandlerBase*> clock_handlers;
+
     void  addSelfLink(const std::string& name);
     Link* getLinkFromParentSharedPort(const std::string& port);
 

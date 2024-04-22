@@ -40,8 +40,8 @@
 #include "sst/core/warnmacros.h"
 
 #include <cinttypes>
-#include <utility>
 #include <fstream>
+#include <utility>
 
 #define SST_SIMTIME_MAX 0xffffffffffffffff
 
@@ -148,7 +148,7 @@ Simulation_impl::createSimulation(Config* config, RankInfo my_rank, RankInfo num
     instanceVec.resize(num_ranks.thread);
     instanceVec[my_rank.thread] = instance;
     instance->intializeProfileTools(config->enabledProfiling());
-    
+
     return instance;
 }
 
@@ -940,6 +940,22 @@ Simulation_impl::registerClock(TimeConverter* tcFreq, Clock::HandlerBase* handle
     return tcFreq;
 }
 
+void
+Simulation_impl::registerClock(SimTime_t factor, Clock::HandlerBase* handler, int priority)
+{
+    TraceFunction        trace(CALL_INFO_LONG, false);
+    clockMap_t::key_type mapKey = std::make_pair(factor, priority);
+    trace.output("clockMap.size() = %zu\n", clockMap.size());
+    if ( clockMap.find(mapKey) == clockMap.end() ) {
+        trace.output("Clock with factor %" PRIu64 " not found, creating it\n", factor);
+        Clock* ce        = new Clock(timeLord.getTimeConverter(factor), priority);
+        clockMap[mapKey] = ce;
+
+        ce->schedule();
+    }
+    clockMap[mapKey]->registerHandler(handler);
+}
+
 Cycle_t
 Simulation_impl::reregisterClock(TimeConverter* tc, Clock::HandlerBase* handler, int priority)
 {
@@ -962,6 +978,16 @@ Simulation_impl::getNextClockCycle(TimeConverter* tc, int priority)
             CALL_INFO, 1, "Call to getNextClockCycle() on a clock that was not previously registered, exiting...\n");
     }
     return clockMap[mapKey]->getNextCycle();
+}
+
+SimTime_t
+Simulation_impl::getClockForHandler(Clock::HandlerBase* handler)
+{
+    // Have to search all the clocks
+    for ( auto& x : clockMap ) {
+        if ( x.second->isHandlerRegistered(handler) ) { return x.first.first; }
+    }
+    return 0;
 }
 
 void
@@ -1257,35 +1283,35 @@ Simulation_impl::checkpoint()
     TraceFunction trace(CALL_INFO_LONG, false);
     trace.output("Checkpoint triggered at time %" PRIu64 "\n", currentSimCycle);
     printSimulationState();
-    std::string checkpoint_filename = "sst_checkpoint_" + std::to_string(checkpoint_id) + ".bin"; 
+    std::string checkpoint_filename = "sst_checkpoint_" + std::to_string(checkpoint_id) + ".bin";
     checkpoint_id++;
 
     std::ofstream fs(checkpoint_filename, std::ios::out | std::ios::binary);
 
     SST::Core::Serialization::serializer ser;
     ser.enable_pointer_tracking();
-    
+
     size_t size, buffer_size;
-    char* buffer;
+    char*  buffer;
 
     /* Section 1: Config options */
     ser.start_sizing();
-    ser& num_ranks.rank;
-    ser& num_ranks.thread;
+    ser&        num_ranks.rank;
+    ser&        num_ranks.thread;
     std::string libpath = factory->getSearchPaths();
-    ser& libpath;
-    ser& timeLord.timeBaseString;
-    ser& output_directory;
+    ser&        libpath;
+    ser&        timeLord.timeBaseString;
+    ser&        output_directory;
     std::string prefix = sim_output.getPrefix();
-    ser& prefix;
-    uint32_t verbose = sim_output.getVerboseLevel();
-    ser& verbose;
-    ser& globalOutputFileName;
+    ser&        prefix;
+    uint32_t    verbose = sim_output.getVerboseLevel();
+    ser&        verbose;
+    ser&        globalOutputFileName;
 
-    size = ser.size();
+    size        = ser.size();
     buffer_size = size;
-    buffer = new char[buffer_size];
-    
+    buffer      = new char[buffer_size];
+
     ser.start_packing(buffer, size);
     ser& num_ranks.rank;
     ser& num_ranks.thread;
@@ -1296,9 +1322,11 @@ Simulation_impl::checkpoint()
     ser& verbose;
     ser& globalOutputFileName;
 
-    trace.output("Wrote checkpoint header (%zu bytes): %" PRIu32 ", %" PRIu32 ", '%s', '%s', "
-                "'%s', '%s', %" PRIu32 ", '%s'\n", size, num_ranks.rank, num_ranks.thread, libpath.c_str(), timebase.c_str(),
-                output_directory.c_str(), prefix.c_str(), verbose, globalOutputFileName.c_str());
+    trace.output(
+        "Wrote checkpoint header (%zu bytes): %" PRIu32 ", %" PRIu32 ", '%s', '%s', "
+        "'%s', '%s', %" PRIu32 ", '%s'\n",
+        size, num_ranks.rank, num_ranks.thread, libpath.c_str(), timeLord.timeBaseString.c_str(),
+        output_directory.c_str(), prefix.c_str(), verbose, globalOutputFileName.c_str());
 
     fs.write(reinterpret_cast<const char*>(&size), sizeof(size));
     fs.write(buffer, size);
@@ -1312,7 +1340,7 @@ Simulation_impl::checkpoint()
     size = ser.size();
     if ( size > buffer_size ) {
         buffer_size = size;
-        delete [] buffer;
+        delete[] buffer;
         buffer = new char[buffer_size];
     }
 
@@ -1331,14 +1359,14 @@ Simulation_impl::checkpoint()
     ser& num_ranks;
     ser& my_rank;
     ser& currentSimCycle;
-    //ser& threadMinPartTC;
+    // ser& threadMinPartTC;
     ser& minPart;
     ser& minPartTC;
     ser& interThreadLatencies;
     ser& interThreadMinLatency;
     ser& endSim;
     ser& independent;
-    //ser& sim_output;
+    // ser& sim_output;
     ser& runMode;
     ser& currentPriority;
     ser& endSimCycle;
@@ -1348,14 +1376,18 @@ Simulation_impl::checkpoint()
     ser& m_exit;
     ser& syncManager;
     ser& m_heartbeat;
+
+    // Serialize the clockmap
+    ser& clockMap;
+
     // Last, get the timevortex
     ser& timeVortex;
 
-    size   = ser.size();
-    if (size > buffer_size) {
-        delete [] buffer;
+    size = ser.size();
+    if ( size > buffer_size ) {
+        delete[] buffer;
         buffer_size = size;
-        buffer = new char[buffer_size];
+        buffer      = new char[buffer_size];
     }
 
     // Pack buffer
@@ -1364,14 +1396,14 @@ Simulation_impl::checkpoint()
     ser& num_ranks;
     ser& my_rank;
     ser& currentSimCycle;
-    //ser& threadMinPartTC;
+    // ser& threadMinPartTC;
     ser& minPart;
     ser& minPartTC;
     ser& interThreadLatencies;
     ser& interThreadMinLatency;
     ser& endSim;
     ser& independent;
-    //ser& sim_output;
+    // ser& sim_output;
     ser& runMode;
     ser& currentPriority;
     ser& endSimCycle;
@@ -1381,6 +1413,9 @@ Simulation_impl::checkpoint()
     ser& m_exit;
     ser& syncManager;
     ser& m_heartbeat;
+
+    ser& clockMap;
+
     // Last, get the timevortex
     ser& timeVortex;
 
@@ -1394,30 +1429,29 @@ Simulation_impl::checkpoint()
     fs.write(reinterpret_cast<const char*>(&size), sizeof(size));
 
     // Serialize component blobs individually
-    for (auto comp = compInfoMap.begin(); comp != compInfoMap.end(); comp++ )
-    {
+    for ( auto comp = compInfoMap.begin(); comp != compInfoMap.end(); comp++ ) {
         trace.output("Writing component...\n");
         ser.start_sizing();
         ComponentInfo* compinfo = *comp;
-        ser& compinfo;
+        ser&           compinfo;
         size = ser.size();
 
-        if (buffer_size < size) {
-            delete [] buffer;
-            buffer = new char[size];
+        if ( buffer_size < size ) {
+            delete[] buffer;
+            buffer      = new char[size];
             buffer_size = size;
         }
-        
+
         ser.start_packing(buffer, size);
         ser& compinfo;
-        
+
         trace.output("Writing component blob: %zu bytes\n", size);
         fs.write(reinterpret_cast<const char*>(&size), sizeof(size));
         fs.write(buffer, size);
     }
 
     fs.close();
-    delete [] buffer;
+    delete[] buffer;
 
     /*
      * Still needs to be added to checkpoint:
@@ -1425,15 +1459,15 @@ Simulation_impl::checkpoint()
      *  - SST::Statistics::StatisticProcessingEngine stat_engine;
      *  - oneShotMap_t oneShotMap;
      *  - Output sim_output;
-     * 
+     *
      * The rest will be recreated at restart or is not needed for checkpoint.
-     *  
+     *
      * Recreated:
      *  clockMap_t              clockMap;
      *  static std::unordered_map<std::thread::id, Simulation_impl*> instanceMap;
      *  static std::vector<Simulation_impl*>                         instanceVec;
      *  TimeLord timeLord;
-     * 
+     *
      * Not saved or reset to default anyways at restart
      *  static std::atomic<int> untimed_msg_count;
      *  ShutdownMode_t          shutdown_mode;
@@ -1452,15 +1486,15 @@ Simulation_impl::checkpoint()
      *  std::map<uintptr_t, Link*>     link_restart_tracking;
      *  std::map<uintptr_t, uintptr_t> event_handler_restart_tracking;
      *  CheckpointAction*              m_checkpoint;
-    */
+     */
 }
 
 void
 Simulation_impl::restart(Config* cfg)
 {
-    TraceFunction trace(CALL_INFO_LONG, false);
-    size_t size, buffer_size;
-    char*  buffer;
+    TraceFunction                        trace(CALL_INFO_LONG, false);
+    size_t                               size, buffer_size;
+    char*                                buffer;
     SST::Core::Serialization::serializer ser;
     ser.enable_pointer_tracking();
     std::ifstream fs(cfg->configFile(), std::ios::binary);
@@ -1474,14 +1508,13 @@ Simulation_impl::restart(Config* cfg)
     trace.output("Reading library blob: %zu bytes\n", size);
 
     buffer_size = size;
-    buffer = new char[buffer_size];
+    buffer      = new char[buffer_size];
     fs.read(buffer, size);
     ser.start_unpacking(buffer, size);
 
     std::set<std::string> libnames;
-    ser& libnames;
-    for (auto lib : libnames)
-    {
+    ser&                  libnames;
+    for ( auto lib : libnames ) {
         trace.output("Restart load lib %s\n", lib.c_str());
     }
 
@@ -1491,10 +1524,10 @@ Simulation_impl::restart(Config* cfg)
     /* Now get the global blob */
     fs.read(reinterpret_cast<char*>(&size), sizeof(size));
     trace.output("Reading global blob: %zu bytes\n", size);
-    if (size > buffer_size) {
-        delete [] buffer;
+    if ( size > buffer_size ) {
+        delete[] buffer;
         buffer_size = size;
-        buffer = new char[buffer_size];
+        buffer      = new char[buffer_size];
     }
     fs.read(buffer, size);
 
@@ -1504,7 +1537,7 @@ Simulation_impl::restart(Config* cfg)
     ser& my_rank;
     ser& currentSimCycle;
     trace.output("simcycle: %" PRIu64 "\n", currentSimCycle);
-    //ser& threadMinPartTC;
+    // ser& threadMinPartTC;
     ser& minPart;
     ser& minPartTC;
     ser& interThreadLatencies;
@@ -1512,7 +1545,7 @@ Simulation_impl::restart(Config* cfg)
     ser& endSim;
     ser& independent;
     trace.output("minpartc: %" PRIu64 "\n", minPartTC->getFactor());
-    //ser& sim_output;
+    // ser& sim_output;
     ser& runMode;
     ser& currentPriority;
     ser& endSimCycle;
@@ -1526,6 +1559,8 @@ Simulation_impl::restart(Config* cfg)
     trace.output("here3.2\n");
     ser& m_heartbeat;
     trace.output("here3.3\n");
+
+    ser& clockMap;
     // Last, get the timevortex
     ser& timeVortex;
     trace.output("here4\n");
@@ -1542,25 +1577,24 @@ Simulation_impl::restart(Config* cfg)
     trace.output("Reading %zu components\n", compCount);
 
     // Deserialize component blobs individually
-    for (size_t comp = 0; comp < compCount; comp++)
-    {
+    for ( size_t comp = 0; comp < compCount; comp++ ) {
         fs.read(reinterpret_cast<char*>(&size), sizeof(size));
         trace.output("Reading component blob: %zu bytes\n", size);
-        if (size > buffer_size) {
-            delete [] buffer;
+        if ( size > buffer_size ) {
+            delete[] buffer;
             buffer_size = size;
-            buffer = new char[buffer_size];
+            buffer      = new char[buffer_size];
         }
         fs.read(buffer, size);
         ser.start_unpacking(buffer, size);
         ComponentInfo* compInfo = new ComponentInfo();
-        ser& compInfo;
+        ser&           compInfo;
         compInfoMap.insert(compInfo);
-    }   
+    }
 
 
     fs.close();
-    delete [] buffer;
+    delete[] buffer;
 
     printSimulationState();
 
@@ -1577,10 +1611,10 @@ Simulation_impl::printSimulationState()
     sim_output.output("num_ranks: %" PRIu32 ", %" PRIu32 "\n", num_ranks.rank, num_ranks.thread);
     sim_output.output("my_rank:   %" PRIu32 ", %" PRIu32 "\n", my_rank.rank, my_rank.thread);
     sim_output.output("currentSimCycle: %" PRIu64 "\n", currentSimCycle);
-    //sim_output.output("threadMinPartTC: %" PRIu64 "\n", threadMinPartTC->getFactor());
+    // sim_output.output("threadMinPartTC: %" PRIu64 "\n", threadMinPartTC->getFactor());
     sim_output.output("minPart: %" PRIu64 "\n", minPart);
     sim_output.output("minPartTC: %" PRIu64 "\n", minPartTC->getFactor());
-    for (auto i : interThreadLatencies) {
+    for ( auto i : interThreadLatencies ) {
         tmp_str = tmp_str + " " + std::to_string(i);
     }
     tmp_str += " ";
@@ -1599,18 +1633,17 @@ Simulation_impl::printSimulationState()
     timeVortex->dbg_print(sim_output);
 
     sim_output.output("\n\nPrinting re-generated state:\n");
-    
-    //clockMap
-    //oneShotMap
+
+    // clockMap
+    // oneShotMap
     sim_output.output("shutdown_mode: %d\n", (int)shutdown_mode);
     sim_output.output("wireUpFinished: %s\n", wireUpFinished ? "true" : "false");
-    //timeLord
-    //instanceMap
-    //instanceVec
-    
+    // timeLord
+    // instanceMap
+    // instanceVec
+
     sim_output.output("\n\nPrinting ComponentInfoMap:\n");
-    for (auto comp = compInfoMap.begin(); comp != compInfoMap.end(); comp++)
-    {
+    for ( auto comp = compInfoMap.begin(); comp != compInfoMap.end(); comp++ ) {
         (*comp)->test_printComponentInfoHierarchy();
         (*comp)->getComponent()->printStatus(sim_output);
     }
@@ -1619,7 +1652,7 @@ Simulation_impl::printSimulationState()
      * Not printing YET
      * - stat engine
      * - sharedRegionManager
-     * 
+     *
      * Not printing
      *  - current_activity
      *  - untimed_msg_count
@@ -1635,7 +1668,6 @@ Simulation_impl::printSimulationState()
      *  - complete_phase_total_time
 
      */
-
 }
 
 void

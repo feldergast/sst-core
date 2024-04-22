@@ -112,6 +112,17 @@ BaseComponent::pushValidParams(Params& params, const std::string& type)
 void
 BaseComponent::registerClock_impl(TimeConverter* tc, Clock::HandlerBase* handler, bool regAll)
 {
+
+    // Need to see if I already know about this clock handler
+    bool found = false;
+    for ( auto* x : clock_handlers ) {
+        if ( handler == x ) {
+            found = true;
+            break;
+        }
+    }
+    if ( !found ) clock_handlers.push_back(handler);
+
     // Check to see if there is a profile tool installed
     auto tools = sim_->getProfileTool<Profile::ClockHandlerProfileTool>("clock");
 
@@ -815,15 +826,45 @@ void
 BaseComponent::serialize_order(SST::Core::Serialization::serializer& ser)
 {
     TraceFunction trace(CALL_INFO_LONG, false);
-    //printf("basecomponent = %p\n", my_info);
+    // printf("basecomponent = %p\n", my_info);
     trace.output("BaseComponent->serialize_order %d\n", __LINE__);
     ser& my_info;
     trace.output("BaseComponent->serialize_order %d\n", __LINE__);
     ser& isExtension;
     trace.output("BaseComponent->serialize_order %d\n", __LINE__);
 
-
-    if ( ser.mode() == SST::Core::Serialization::serializer::UNPACK ) { sim_ = Simulation_impl::getSimulation(); }
+    switch ( ser.mode() ) {
+    case SST::Core::Serialization::serializer::SIZER:
+    case SST::Core::Serialization::serializer::PACK:
+    {
+        // Need to serialize each handler
+        std::pair<Clock::HandlerBase*, SimTime_t> p;
+        size_t                                    num_handlers = clock_handlers.size();
+        ser&                                      num_handlers;
+        for ( auto* handler : clock_handlers ) {
+            p.first  = handler;
+            // See if it's currently registered with a clock
+            p.second = sim_->getClockForHandler(handler);
+            ser& p;
+        }
+        break;
+    }
+    case SST::Core::Serialization::serializer::UNPACK:
+    {
+        sim_ = Simulation_impl::getSimulation();
+        std::pair<Clock::HandlerBase*, SimTime_t> p;
+        size_t                                    num_handlers;
+        ser&                                      num_handlers;
+        for ( size_t i = 0; i < num_handlers; ++i ) {
+            ser& p;
+            // Add handler to clock_handlers list
+            clock_handlers.push_back(p.first);
+            // If it was previously registered, register it now
+            if ( p.second ) { sim_->registerClock(p.second, p.first, CLOCKPRIORITY); }
+        }
+        break;
+    }
+    }
 }
 
 

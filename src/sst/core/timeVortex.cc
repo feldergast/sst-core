@@ -11,9 +11,10 @@
 
 #include "sst_config.h"
 
+#include "sst/core/timeVortex.h"
+
 #include "sst/core/event.h"
 #include "sst/core/simulation_impl.h"
-#include "sst/core/timeVortex.h"
 
 namespace SST {
 
@@ -24,7 +25,7 @@ void
 pack_timevortex(TimeVortex*& s, SST::Core::Serialization::serializer& ser)
 {
     std::string type = Simulation_impl::getSimulation()->timeVortexType;
-    ser& type;
+    ser&        type;
     s->serialize_order(ser);
 }
 
@@ -34,7 +35,7 @@ unpack_timevortex(TimeVortex*& s, SST::Core::Serialization::serializer& ser)
     std::string tv_type;
     ser&        tv_type;
     printf("Creating time vortex type %s\n", tv_type.c_str());
-    Params      p;
+    Params p;
     s = Factory::getFactory()->Create<TimeVortex>(tv_type, p);
     s->serialize_order(ser);
 }

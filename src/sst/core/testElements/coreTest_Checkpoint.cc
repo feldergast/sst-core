@@ -32,6 +32,19 @@ coreTestCheckpoint::coreTestCheckpoint(ComponentId_t id, Params& params) : Compo
     sst_assert(link, CALL_INFO, -1, "Could not configure link");
 
     testString = params.find<std::string>("teststring", "");
+
+    std::string freq = params.find<std::string>("clock_frequency", "100kHz");
+
+    // Need to keep a pointer to the clock handler so we can
+    // reregister clock
+    clock_handler = new Clock::Handler2<coreTestCheckpoint, &coreTestCheckpoint::handleClock>(this);
+    clock_tc      = registerClock(freq, clock_handler);
+
+    duty_cycle       = params.find<int>("clock_duty_cycle", 10);
+    duty_cycle_count = duty_cycle;
+
+    self_link = configureSelfLink(
+        "clock_restart", clock_tc, new Event::Handler2<coreTestCheckpoint, &coreTestCheckpoint::restartClock>(this));
 }
 
 coreTestCheckpoint::~coreTestCheckpoint() {}
@@ -58,26 +71,52 @@ coreTestCheckpoint::handleEvent(Event* ev)
     link->send(event);
 }
 
+// clock hander just prints
+bool
+coreTestCheckpoint::handleClock(Cycle_t cycle)
+{
+    getSimulationOutput().output("Clock cycle count = %" PRIu64 "\n", cycle);
+    duty_cycle_count--;
+    if ( duty_cycle_count == 0 ) {
+        duty_cycle_count = duty_cycle;
+        // Send a wakeup
+        self_link->send(duty_cycle, nullptr);
+        return true;
+    }
+    return false;
+}
+
+// restarts the clock
+void
+coreTestCheckpoint::restartClock(Event* UNUSED(ev))
+{
+    // Event passed in is nullptr, no need to do anything with it
+    reregisterClock(clock_tc, clock_handler);
+}
+
 
 void
 coreTestCheckpoint::printStatus(Output& out)
 {
-    out.output("Component Status: %s, %p, %" PRIu32 ", %s\n", 
-        getName().c_str(), link, counter, testString.c_str());
+    out.output("Component Status: %s, %p, %" PRIu32 ", %s\n", getName().c_str(), link, counter, testString.c_str());
 }
 
 
-void 
+void
 coreTestCheckpoint::serialize_order(SST::Core::Serialization::serializer& ser)
 {
     TraceFunction trace(CALL_INFO_LONG, false);
     SST::Component::serialize_order(ser);
     ser& link;
+    ser& self_link;
+    ser& clock_handler;
+    ser& clock_tc;
+    ser& duty_cycle;
+    ser& duty_cycle_count;
     trace.output("link = %p\n", link);
     ser& counter;
     trace.output("counter = %" PRIu32 "\n", counter);
 }
-
 
 
 // Element Libarary / Serialization stuff

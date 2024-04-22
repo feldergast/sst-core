@@ -53,7 +53,7 @@ public:
             // If it falls through to the default, let's check to see if it's
             // a non-polymorphic class and try to call serialize_order
             if constexpr ( std::is_class_v<std::remove_pointer<T>> && !std::is_polymorphic_v<std::remove_pointer<T>> ) {
-                if (ser.mode() == serializer::UNPACK) {
+                if ( ser.mode() == serializer::UNPACK ) {
                     t = new typename std::remove_pointer<T>::type();
                     ser.report_new_pointer(reinterpret_cast<uintptr_t>(t));
                 }

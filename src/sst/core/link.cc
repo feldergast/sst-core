@@ -35,13 +35,13 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
 {
     TraceFunction trace(CALL_INFO_LONG, false);
     // Need to treat Links and SelfLinks differently
-    bool    self_link;
+    bool          self_link;
     // Type of link (Link is not polymorphic, so we can't use
     // dynamic_cast to see which type it is):
     // 0 - nullptr
     // 1 - Link
     // 2 - SelfLink
-    int16_t type;
+    int16_t       type;
 
     switch ( ser.mode() ) {
     case serializer::SIZER:
@@ -133,7 +133,7 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
 
                 // First serialize the pointer tag so we can fix
                 // things up after restart
-                
+
                 // Now serialize the handler
                 Event::HandlerBase* handler = reinterpret_cast<Event::HandlerBase*>(s->pair_link->delivery_info);
 
@@ -196,6 +196,7 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
             ser & s->tag;
             // Profile tools not yet supported
             // ser & s->profile_tools;
+            s->send_queue = Simulation_impl::getSimulation()->getTimeVortex();
         }
         else {
             trace.output("Link type = REGULAR (%d)\n", type);
@@ -211,7 +212,7 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
             ser& pair_tag;
             trace.output("My pair pointer tag = %lu\n", pair_tag);
 
-            s               = new Link();
+            s = new Link();
             ser.report_new_pointer(reinterpret_cast<uintptr_t>(s));
             Link* pair_link = nullptr;
 
@@ -226,7 +227,7 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
                 s->pair_link = pair_link;
 
                 // Set my neighbor's pair link
-                pair_link->pair_link = s;      
+                pair_link->pair_link = s;
             }
             else {
                 trace.output("My pair link is not there, add myself to tracker\n");
@@ -271,9 +272,9 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
                 // TODO: Need to reregister with the SyncManager
             }
             else {*/
-                        trace.output("link->serialize_order UNPACK %d\n", __LINE__);
+            trace.output("link->serialize_order UNPACK %d\n", __LINE__);
 
-                s->send_queue = Simulation_impl::getSimulation()->getTimeVortex();
+            s->send_queue = Simulation_impl::getSimulation()->getTimeVortex();
             //}
 
             // Profile tools not yet supported

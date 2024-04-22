@@ -116,7 +116,8 @@ SimulatorHeartbeat::execute(void)
     }
 }
 
-void SimulatorHeartbeat::serialize_order(SST::Core::Serialization::serializer& ser)
+void
+SimulatorHeartbeat::serialize_order(SST::Core::Serialization::serializer& ser)
 {
     Action::serialize_order(ser);
     ser& rank;
