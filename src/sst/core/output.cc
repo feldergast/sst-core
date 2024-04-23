@@ -494,6 +494,30 @@ Output::getThreadRank() const
     return m_threadMap[std::this_thread::get_id()];
 }
 
+void
+Output::serialize_order(SST::Core::Serialization::serializer& ser)
+{
+    ser& m_objInitialized;
+    ser& m_outputPrefix;
+    ser& m_verboseLevel;
+    ser& m_verboseMask;
+    ser& m_targetLoc;
+    ser& m_sstLocalFileName;
+
+    if (ser.mode() == SST::Core::Serialization::serializer::UNPACK && m_objInitialized) {
+        // Set Member Variables
+        m_sstLocalFileHandle       = nullptr;
+        m_sstLocalFileAccessCount  = 0;
+        m_targetFileHandleRef      = nullptr;
+        m_targetFileNameRef        = nullptr;
+        m_targetFileAccessCountRef = nullptr;
+
+        setTargetOutput(m_targetLoc);
+    }
+}
+
+
+
 
 thread_local std::vector<char> TraceFunction::indent_array(100, ' ');
 thread_local int               TraceFunction::trace_level = 0;

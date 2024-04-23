@@ -8,14 +8,18 @@ comp_c0.addParams({
       "starter" : 'T',
       "counter" : 1000,
       "clock_frequency" : "100 kHz",
-      "clock_duty_cycle" : 20
+      "clock_duty_cycle" : 20,
+      "test_string" : "hi"
 })
 
 comp_c1 = sst.Component("c1", "coreTestElement.coreTestCheckpoint")
 comp_c1.addParams({
       "starter" : 'F',
       "clock_frequency" : "100 kHz",
-      "clock_duty_cycle" : 15
+      "clock_duty_cycle" : 15,
+      "test_string" : "hello",
+      "outputprefix" : "c1 talking",
+      "outputverbose" : 2,
 })
 
 # Connect the components

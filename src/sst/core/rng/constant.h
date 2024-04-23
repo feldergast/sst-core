@@ -54,6 +54,24 @@ public:
     */
     double getMean() { return mean; }
 
+    /**
+        Default constructor. FOR SERIALIZATION ONLY.
+     */
+    ConstantDistribution() : RandomDistribution() {}
+
+    /**
+        Serialization function for checkpoint
+    */
+    void serialize_order(SST::Core::Serialization::serializer& ser) override
+    {
+        ser& mean;
+    }
+
+    /**
+        Serialization macro
+    */
+    ImplementSerializable(SST::RNG::ConstantDistribution)
+
 protected:
     /**
         Describes the constant value to return from the distribution.

@@ -116,6 +116,29 @@ public:
     */
     double getStandardDev() { return stddev; }
 
+    /**
+        Default constructor. FOR SERIALIZATION ONLY.
+     */
+    GaussianDistribution() : RandomDistribution() {}
+
+    /**
+        Serialization function for checkpoint
+    */
+    void serialize_order(SST::Core::Serialization::serializer& ser) override
+    {
+        ser& mean;
+        ser& stddev;
+        ser& baseDistrib;
+        ser& unusedPair;
+        ser& usePair;
+        ser& deleteDistrib;
+    }
+
+    /**
+        Serialization macro
+    */
+    ImplementSerializable(SST::RNG::GaussianDistribution)
+
 protected:
     /**
         The mean of the Gaussian distribution

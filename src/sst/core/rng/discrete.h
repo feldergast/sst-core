@@ -62,7 +62,7 @@ public:
         \param baseDist The base random number generator to take the distribution from.
     */
     DiscreteDistribution(const double* probs, const uint32_t probsCount, SST::RNG::Random* baseDist) :
-        probCount(probsCount)
+        RandomDistribution(), probCount(probsCount)
     {
 
         probabilities   = (double*)malloc(sizeof(double) * probsCount);
@@ -104,6 +104,34 @@ public:
 
         return (double)index;
     }
+
+    /**
+        Default constructor. FOR SERIALIZATION ONLY.
+     */
+    DiscreteDistribution() : RandomDistribution() {}
+
+    /**
+        Serialization function for checkpoint
+    */
+    void serialize_order(SST::Core::Serialization::serializer& ser) override
+    {
+        ser& baseDistrib;
+        ser& deleteDistrib;
+        ser& probCount;
+
+        if (ser.mode() == SST::Core::Serialization::serializer::UNPACK) {
+            probabilities   = (double*)malloc(sizeof(double) * probCount);
+        }
+
+        for (uint32_t i = 0; i < probCount; i++) {
+            ser& probabilities[i];
+        }
+    }
+
+    /**
+        Serialization macro
+    */
+    ImplementSerializable(SST::RNG::DiscreteDistribution)
 
 protected:
     /**

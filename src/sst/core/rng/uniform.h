@@ -91,6 +91,27 @@ public:
         return static_cast<double>(current_bin - 1);
     }
 
+    /**
+        Default constructor. FOR SERIALIZATION ONLY.
+     */
+    UniformDistribution() : RandomDistribution() {}
+
+    /**
+        Serialization function for checkpoint
+    */
+    void serialize_order(SST::Core::Serialization::serializer& ser) override
+    {
+        ser& baseDistrib;
+        ser& deleteDistrib;
+        ser& probCount;
+        ser& probPerBin;
+    }
+
+    /**
+        Serialization macro
+    */
+    ImplementSerializable(SST::RNG::UniformDistribution)
+
 protected:
     /**
         Sets the base random number generator for the distribution.

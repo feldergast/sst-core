@@ -92,6 +92,16 @@ public:
     */
     void seed(uint64_t newSeed);
 
+    /**
+     * Serialization function for checkpoint
+    */
+    void serialize_order(SST::Core::Serialization::serializer& ser);
+
+    /** 
+      Serialization macro
+    */
+    ImplementSerializable(SST::RNG::MarsagliaRNG)
+
 private:
     /**
         Generates the next random number

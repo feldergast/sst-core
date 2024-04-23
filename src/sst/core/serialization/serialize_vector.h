@@ -15,7 +15,7 @@
 #include "sst/core/serialization/serializer.h"
 
 // REMOVE ME
-#include "sst/core/output.h"
+//#include "sst/core/output.h"
 
 #include <vector>
 
@@ -31,7 +31,7 @@ class serialize<std::vector<T>>
 public:
     void operator()(Vector& v, serializer& ser)
     {
-        TraceFunction trace(CALL_INFO_LONG, false);
+        //TraceFunction trace(CALL_INFO_LONG, false);
         switch ( ser.mode() ) {
         case serializer::SIZER:
         {
@@ -41,18 +41,18 @@ public:
         }
         case serializer::PACK:
         {
-            trace.output("PACK\n");
+            //trace.output("PACK\n");
             size_t size = v.size();
             ser.pack(size);
-            trace.output("vector size = %zu\n", size);
+            //trace.output("vector size = %zu\n", size);
             break;
         }
         case serializer::UNPACK:
         {
-            trace.output("UNPACK\n");
+            //trace.output("UNPACK\n");
             size_t s;
             ser.unpack(s);
-            trace.output("vector size = %zu\n", s);
+            //trace.output("vector size = %zu\n", s);            
             v.resize(s);
             break;
         }

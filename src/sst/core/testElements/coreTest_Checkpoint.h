@@ -15,6 +15,7 @@
 #include "sst/core/component.h"
 #include "sst/core/event.h"
 #include "sst/core/link.h"
+#include "sst/core/rng/rng.h"
 
 namespace SST {
 namespace CoreTestCheckpoint {
@@ -68,9 +69,24 @@ public:
     SST_ELI_DOCUMENT_PARAMS(
         { "starter", "Whether this component initiates the ping-pong", "T"},
         { "count", "Number of times to bounce the message back and forth", "1000" },
-        { "teststring", "A test string", ""},
+        { "test_string", "A test string", ""},
         { "clock_frequency", "Frequency for clock", "100kHz"},
-        { "clock_duty_cycle", "Number of cycles to keep clock on and off", "10"}
+        { "clock_duty_cycle", "Number of cycles to keep clock on and off", "10"},
+        // Testing output options
+        { "output_prefix", "Prefix for output", ""},
+        { "output_verbose", "Verbosity for output", "0"},
+        // Testing RNG & distributions
+        { "rng_seed_w",        "The first seed for marsaglia", "7" },
+        { "rng_seed_z",        "The second seed for marsaglia", "5" },
+        { "rng_seed",          "The seed for mersenne and xorshift", "11" },
+        { "dist_const",        "Constant for ConstantDistribution", "1.5" },
+        { "dist_discrete_count", "Number of proabilities in discrete distribution", "1"},
+        { "dist_discrete_probs", "Probabilities in discrete distribution", "[1]"},
+        { "dist_exp_lambda",    "Lambda for exponentional distribution", "1.0"},
+        { "dist_gauss_mean",    "Mean for Gaussian distribution", "1.0"},
+        { "dist_gauss_stddev",  "Standard deviation for Gaussian distribution", "0.2"},
+        { "dist_poisson_lambda", "Lambda for Poisson distribution", "1.0"},
+        { "dist_uni_bins",      "Number of proability bins for the uniform distribution", "4"}
     )
 
     SST_ELI_DOCUMENT_PORTS(
@@ -81,6 +97,8 @@ public:
     ~coreTestCheckpoint();
 
     void setup() override;
+
+    void finish() override;
 
     void printStatus(Output& out) override;
 
@@ -101,7 +119,12 @@ private:
     int                 duty_cycle;       // Used to count clock on and off cycles
     int                 duty_cycle_count; // Used to count clock on and off cycles
     uint32_t            counter;          // Unused after setup
-    std::string         testString;       // Test that string got serialized
+    std::string         test_string;      // Test that string got serialized
+    Output*             output;
+
+    RNG::Random* mersenne;
+    RNG::Random* marsaglia;
+    RNG::Random* xorshift;
 };
 
 } // namespace CoreTestCheckpoint

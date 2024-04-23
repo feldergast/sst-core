@@ -12,6 +12,9 @@
 #include "sst_config.h"
 
 #include "sst/core/testElements/coreTest_Checkpoint.h"
+#include "sst/core/rng/mersenne.h"
+#include "sst/core/rng/marsaglia.h"
+#include "sst/core/rng/xorshift.h"
 
 #include <assert.h>
 
@@ -31,7 +34,7 @@ coreTestCheckpoint::coreTestCheckpoint(ComponentId_t id, Params& params) : Compo
     link = configureLink("port", new Event::Handler2<coreTestCheckpoint, &coreTestCheckpoint::handleEvent>(this));
     sst_assert(link, CALL_INFO, -1, "Could not configure link");
 
-    testString = params.find<std::string>("teststring", "");
+    test_string = params.find<std::string>("test_string", "");
 
     std::string freq = params.find<std::string>("clock_frequency", "100kHz");
 
@@ -45,6 +48,24 @@ coreTestCheckpoint::coreTestCheckpoint(ComponentId_t id, Params& params) : Compo
 
     self_link = configureSelfLink(
         "clock_restart", clock_tc, new Event::Handler2<coreTestCheckpoint, &coreTestCheckpoint::restartClock>(this));
+
+    // Output
+    output = new Output(params.find<std::string>("output_prefix", ""), params.find<uint32_t>("output_verbose", 0), 0, Output::output_location_t::STDOUT);
+
+    // RNG & Distributions
+    marsaglia = new RNG::MarsagliaRNG(params.find<unsigned int>("rng_seed_w", 7), params.find<unsigned int>("rng_seed_z", 5));
+    mersenne = new RNG::MersenneRNG(params.find<unsigned int>("rng_seed", 11));
+    xorshift = new RNG::XORShiftRNG(params.find<unsigned int>("rng_seed", 11));
+/*
+        { "dist_const",        "Constant for ConstantDistribution", "1.5" },
+        { "dist_discrete_count", "Number of proabilities in discrete distribution", "1"},
+        { "dist_discrete_probs", "Probabilities in discrete distribution", "[1]"},
+        { "dist_exp_lambda",    "Lambda for exponentional distribution", "1.0"},
+        { "dist_gauss_mean",    "Mean for Gaussian distribution", "1.0"},
+        { "dist_gauss_stddev",  "Standard deviation for Gaussian distribution", "0.2"},
+        { "dist_poisson_lambda", "Lambda for Poisson distribution", "1.0"},
+        { "dist_uni_bins",      "Number of proability bins for the uniform distribution", "4"}
+        */
 }
 
 coreTestCheckpoint::~coreTestCheckpoint() {}
@@ -53,6 +74,14 @@ void
 coreTestCheckpoint::setup()
 {
     if ( counter > 0 ) link->send(new coreTestCheckpointEvent(counter));
+}
+
+// Report state that should persist through checkpoint/restart
+void
+coreTestCheckpoint::finish()
+{
+    output->output("%s finished. teststring=%s, output=('%s',%" PRIu32 ")\n", 
+        getName().c_str(), test_string.c_str(), output->getPrefix().c_str(), output->getVerboseLevel());
 }
 
 // incoming event is bounced back after decrementing its counter
@@ -76,6 +105,9 @@ bool
 coreTestCheckpoint::handleClock(Cycle_t cycle)
 {
     getSimulationOutput().output("Clock cycle count = %" PRIu64 "\n", cycle);
+    output->output("RNG: %" PRIu32 ", %" PRIu32 ", %" PRIu32 "\n", 
+        marsaglia->generateNextUInt32(), mersenne->generateNextUInt32(), xorshift->generateNextUInt32());
+
     duty_cycle_count--;
     if ( duty_cycle_count == 0 ) {
         duty_cycle_count = duty_cycle;
@@ -98,7 +130,7 @@ coreTestCheckpoint::restartClock(Event* UNUSED(ev))
 void
 coreTestCheckpoint::printStatus(Output& out)
 {
-    out.output("Component Status: %s, %p, %" PRIu32 ", %s\n", getName().c_str(), link, counter, testString.c_str());
+    out.output("Component Status: %s, %p, %" PRIu32 ", %s\n", getName().c_str(), link, counter, test_string.c_str());
 }
 
 
@@ -116,6 +148,11 @@ coreTestCheckpoint::serialize_order(SST::Core::Serialization::serializer& ser)
     trace.output("link = %p\n", link);
     ser& counter;
     trace.output("counter = %" PRIu32 "\n", counter);
+    ser& test_string;
+    ser& output;
+    ser& mersenne;
+    ser& marsaglia;
+    ser& xorshift;
 }
 
 

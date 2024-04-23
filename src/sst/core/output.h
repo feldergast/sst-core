@@ -24,6 +24,8 @@
 #define __STDC_FORMAT_MACROS
 #endif
 
+#include "sst/core/serialization/serializable.h"
+
 #include <cinttypes>
 #include <cstdio>
 #include <stdarg.h>
@@ -48,7 +50,7 @@ namespace SST {
  * stdout, stderr and/or sst debug file.  All components should
  * use this class to log any information.
  */
-class Output
+class Output : public SST::Core::Serialization::serializable
 {
 public:
     /** Choice of output location
@@ -474,6 +476,10 @@ public:
     static void setFileName(const std::string& filename);
 
     static Output& getDefaultObject() { return m_defaultObject; }
+
+    void serialize_order(SST::Core::Serialization::serializer& ser) override;
+
+    ImplementSerializable(SST::Output)
 
 private:
     friend class TraceFunction;

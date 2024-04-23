@@ -81,6 +81,26 @@ public:
     */
     double getLambda() { return lambda; }
 
+    /**
+        Default constructor. FOR SERIALIZATION ONLY.
+     */
+    ExponentialDistribution() : RandomDistribution() {}
+
+    /**
+        Serialization function for checkpoint
+    */
+    void serialize_order(SST::Core::Serialization::serializer& ser) override
+    {
+        ser& lambda;
+        ser& baseDistrib;
+        ser& deleteDistrib;
+    }
+
+ /**
+        Serialization macro
+    */
+    ImplementSerializable(SST::RNG::ExponentialDistribution)
+
 protected:
     /**
         Sets the lambda of the exponential distribution.

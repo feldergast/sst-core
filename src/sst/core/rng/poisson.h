@@ -87,6 +87,26 @@ public:
     */
     double getLambda() { return lambda; }
 
+    /**
+        Default constructor. FOR SERIALIZATION ONLY.
+     */
+    PoissonDistribution() : RandomDistribution(), lambda(1.0) { }
+
+    /**
+        Serialization function for checkpoint
+    */
+    void serialize_order(SST::Core::Serialization::serializer& ser) override
+    {
+        ser& const_cast<double&>(lambda);
+        ser& baseDistrib;
+        ser& deleteDistrib;
+    }
+
+    /**
+        Serialization macro
+    */
+    ImplementSerializable(PoissonDistribution)
+    
 protected:
     /**
         Sets the lambda of the Poisson distribution.
