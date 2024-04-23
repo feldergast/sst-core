@@ -62,7 +62,8 @@ public:
         \param baseDist The base random number generator to take the distribution from.
     */
     DiscreteDistribution(const double* probs, const uint32_t probsCount, SST::RNG::Random* baseDist) :
-        RandomDistribution(), probCount(probsCount)
+        RandomDistribution(),
+        probCount(probsCount)
     {
 
         probabilities   = (double*)malloc(sizeof(double) * probsCount);
@@ -119,11 +120,11 @@ public:
         ser& deleteDistrib;
         ser& probCount;
 
-        if (ser.mode() == SST::Core::Serialization::serializer::UNPACK) {
-            probabilities   = (double*)malloc(sizeof(double) * probCount);
+        if ( ser.mode() == SST::Core::Serialization::serializer::UNPACK ) {
+            probabilities = (double*)malloc(sizeof(double) * probCount);
         }
 
-        for (uint32_t i = 0; i < probCount; i++) {
+        for ( uint32_t i = 0; i < probCount; i++ ) {
             ser& probabilities[i];
         }
     }

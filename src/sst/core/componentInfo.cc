@@ -195,24 +195,29 @@ ComponentInfo::serialize_order(SST::Core::Serialization::serializer& ser)
     trace.output("name = %s\n", name.c_str());
     ser& const_cast<std::string&>(type);
     trace.output("type = %s\n", type.c_str());
+    trace.output("serializing component\n");
     ser& component;
-    trace.output("componentInfo->serialize_order defaultTimeBase %d\n", __LINE__);
+    trace.output("serializing linkmap\n");
     ser& link_map;
-    trace.output("componentInfo->serialize_order component %d\n", __LINE__);
 
     // Not used after construction, no need to serialize
     // ser& params;
 
     ser& defaultTimeBase;
+    // trace.output("defaultTimeBase.factor = %" PRIu64 "\n", defaultTimeBase->getFactor());
+    trace.output("defaultTimeBase = %p\n", defaultTimeBase);
     // ser& statConfigs;
     // ser& allStatConfig;
     // ser& statLoadLevel;
     // ser& coordinates;
-    trace.output("componentInfo->serialize_order subcomponent stuff %d\n", __LINE__);
     ser& subIDIndex;
+    trace.output("subIDIndex = %" PRIu64 "\n", subIDIndex);
     ser& const_cast<std::string&>(slot_name);
+    trace.output("slot_name = %s\n", slot_name.c_str());
     ser& slot_num;
+    trace.output("slot_num = %d\n", slot_num);
     ser& share_flags;
+    trace.output("share_flags = %llx\n", share_flags);
 
     // For SubComponents map, need to serialize map by hand since we
     // weill need to use the track non-pointer as pointer feature in
@@ -221,6 +226,7 @@ ComponentInfo::serialize_order(SST::Core::Serialization::serializer& ser)
     // own SubCompenents that will need to point to the data location
     // in the map.
 
+    trace.output("Getting ready to serialize subComponents");
     // ser& subComponents;
     switch ( ser.mode() ) {
     case SST::Core::Serialization::serializer::SIZER:
@@ -249,14 +255,18 @@ ComponentInfo::serialize_order(SST::Core::Serialization::serializer& ser)
     {
         size_t size;
         ser&   size;
+        trace.output("UNPACK: size = %zu\n", size);
         for ( size_t i = 0; i < size; ++i ) {
             ComponentId_t key;
             ser&          key;
+            trace.output("key = %" PRIx64 "\n", key);
 
             auto p = subComponents.emplace(key, ComponentInfo {});
 
             ser | p.first->second;
+            trace.output("Made it to line %d\n", __LINE__);
         }
+        trace.output("Made it to line %d\n", __LINE__);
         break;
     }
     }

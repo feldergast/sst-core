@@ -76,7 +76,6 @@ Clock::isHandlerRegistered(Clock::HandlerBase* handler)
 Cycle_t
 Clock::getNextCycle()
 {
-    TraceFunction trace(CALL_INFO_LONG, false);
     if ( !scheduled ) updateCurrentCycle();
 
     return currentCycle + 1;
@@ -85,7 +84,6 @@ Clock::getNextCycle()
 void
 Clock::execute(void)
 {
-    TraceFunction    trace(CALL_INFO_LONG, false);
     Simulation_impl* sim = Simulation_impl::getSimulation();
 
     if ( staticHandlerMap.empty() ) {
@@ -120,7 +118,6 @@ Clock::execute(void)
 void
 Clock::schedule()
 {
-    TraceFunction    trace(CALL_INFO_LONG, false);
     Simulation_impl* sim = Simulation_impl::getSimulation();
     currentCycle         = sim->getCurrentSimCycle() / period->getFactor();
     SimTime_t next       = (currentCycle * period->getFactor()) + period->getFactor();
@@ -143,7 +140,6 @@ Clock::schedule()
 void
 Clock::updateCurrentCycle()
 {
-    TraceFunction    trace(CALL_INFO_LONG, false);
     Simulation_impl* sim = Simulation_impl::getSimulation();
     currentCycle         = sim->getCurrentSimCycle() / period->getFactor();
     return;
@@ -161,7 +157,6 @@ Clock::toString() const
 void
 Clock::serialize_order(SST::Core::Serialization::serializer& ser)
 {
-    TraceFunction trace(CALL_INFO_LONG, false);
     Action::serialize_order(ser);
 
     // Won't serialize the handlers; they'll be re-registered at

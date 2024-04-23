@@ -62,10 +62,7 @@ public:
     /**
         Serialization function for checkpoint
     */
-    void serialize_order(SST::Core::Serialization::serializer& ser) override
-    {
-        ser& mean;
-    }
+    void serialize_order(SST::Core::Serialization::serializer& ser) override { ser& mean; }
 
     /**
         Serialization macro

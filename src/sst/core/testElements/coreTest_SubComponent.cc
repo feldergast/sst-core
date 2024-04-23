@@ -32,7 +32,7 @@ SubComponentLoader::SubComponentLoader(ComponentId_t id, Params& params) : Compo
 {
     std::string freq = params.find<std::string>("clock", "1GHz");
 
-    registerClock(freq, new Clock::Handler<SubComponentLoader>(this, &SubComponentLoader::tick));
+    registerClock(freq, new Clock::Handler2<SubComponentLoader, &SubComponentLoader::tick>(this));
 
     std::string unnamed_sub  = params.find<std::string>("unnamed_subcomponent", "");
     int         num_subcomps = params.find<int>("num_subcomps", 1);
@@ -142,6 +142,7 @@ SubCompSender::clock(Cycle_t cyc)
         if ( nMsgSent ) nMsgSent->addData(1);
         if ( totalMsgSent ) totalMsgSent->addData(1);
         nToSend--;
+        printf("Sent and event, %d more to send\n", nToSend);
     }
 }
 
@@ -159,7 +160,7 @@ SubCompReceiver::SubCompReceiver(ComponentId_t id, Params& params) : SubCompSend
     else
         port_name = params.find<std::string>("port_name");
 
-    link = configureLink(port_name, new Event::Handler<SubCompReceiver>(this, &SubCompReceiver::handleEvent));
+    link = configureLink(port_name, new Event::Handler2<SubCompReceiver, &SubCompReceiver::handleEvent>(this));
     if ( !link ) { Output::getDefaultObject().fatal(CALL_INFO, -1, "Failed to configure port 'recvPort'\n"); }
     // registerTimeBase("1GHz", true);
     nMsgReceived = registerStatistic<uint32_t>("numRecv", "");
@@ -174,6 +175,7 @@ SubCompReceiver::clock(Cycle_t UNUSED(cyc))
 void
 SubCompReceiver::handleEvent(Event* ev)
 {
+    printf("Got an event\n");
     if ( nMsgReceived ) nMsgReceived->addData(1);
     delete ev;
 }

@@ -85,10 +85,10 @@ public:
 
     /**
      * Serialization function for checkpoint
-    */
+     */
     void serialize_order(SST::Core::Serialization::serializer& ser);
 
-    /** 
+    /**
       Serialization macro
     */
     ImplementSerializable(SST::RNG::MersenneRNG)

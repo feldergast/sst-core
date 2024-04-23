@@ -638,6 +638,7 @@ start_simulation(uint32_t tid, SimThreadInfo_t& info, Core::ThreadSafe::Barrier&
         out.output("Printing mempool contents:\n");
         MemPoolAccessor::printUndeletedMemPoolItems("", out);
         out.output("Done printing mempool contents\n");
+        fflush(stdout);
         // exit(-1);
     }
     /* Run Simulation */
@@ -648,29 +649,47 @@ start_simulation(uint32_t tid, SimThreadInfo_t& info, Core::ThreadSafe::Barrier&
      * reflect actual simulation end if that
      * differs from detected simulation end
      */
+    printf("start adjustTimeAtSimEnd() start\n");
+    fflush(stdout);
     sim->adjustTimeAtSimEnd();
+    printf("end adjustTimeAtSimEnd() start\n");
+    fflush(stdout);
     barrier.wait();
+    printf("after barrier\n");
+    fflush(stdout);
 
     sim->complete();
     barrier.wait();
+    printf("after complete barrier\n");
+    fflush(stdout);
 
     sim->finish();
     barrier.wait();
+    printf("after finish barrier\n");
+    fflush(stdout);
 
     /* Tell stat outputs simulation is done */
     do_statoutput_end_simulation(info.myRank);
     barrier.wait();
+    printf("after stat_output barrier\n");
+    fflush(stdout);
 
     barrier.wait();
 
     info.simulated_time = sim->getEndSimTime();
     // g_output.output(CALL_INFO,"Simulation time = %s\n",info.simulated_time.toStringBestSI().c_str());
 
+    printf("after sim->getEndSimTime() = %s\n", info.simulated_time.toStringBestSI().c_str());
+    fflush(stdout);
     double end_time = sst_get_cpu_time();
     info.run_time   = end_time - start_run;
 
+    printf("before getTimeVortexCurrentDepth()\n");
+    fflush(stdout);
     info.max_tv_depth     = sim->getTimeVortexMaxDepth();
     info.current_tv_depth = sim->getTimeVortexCurrentDepth();
+    printf("after getTimeVortexCurrentDepth()\n");
+    fflush(stdout);
 
     // Print the profiling info.  For threads, we will serialize
     // writing and for ranks we will use different files, unless we
@@ -716,7 +735,11 @@ start_simulation(uint32_t tid, SimThreadInfo_t& info, Core::ThreadSafe::Barrier&
     // Put in info about sync memory usage
     info.sync_data_size = sim->getSyncQueueDataSize();
 
+    printf("Start delete sim\n");
+    fflush(stdout);
     delete sim;
+    printf("End delete sim\n");
+    fflush(stdout);
 }
 
 int
@@ -766,14 +789,14 @@ main(int argc, char* argv[])
         if ( !fs.is_open() ) {
             if ( fs.bad() ) {
                 fprintf(stderr, "Unable to open checkpoint file [%s]: badbit set\n", cfg.configFile().c_str());
-                return false;
+                return -1;
             }
             if ( fs.fail() ) {
                 fprintf(stderr, "Unable to open checkpoint file [%s]: %s\n", cfg.configFile().c_str(), strerror(errno));
-                return false;
+                return -1;
             }
             fprintf(stderr, "Unable to open checkpoint file [%s]: unknown error\n", cfg.configFile().c_str());
-            return false;
+            return -1;
         }
 
         fs.read(reinterpret_cast<char*>(&size), sizeof(size));

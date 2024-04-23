@@ -15,7 +15,8 @@ sst.setProgramOption("stop-at", "10us")
 
 # Set up sender using user subcomponent
 loader0 = sst.Component("Loader0", "coreTestElement.SubComponentLoader")
-loader0.addParam("clock", "1.5GHz")
+#loader0.addParam("clock", "1.5GHz")
+loader0.addParam("clock", "0.15GHz")
 
 sub0 = loader0.setSubComponent("mySubComp", "coreTestElement.SubCompSender",0)
 sub0.addParam("sendCount", 15)

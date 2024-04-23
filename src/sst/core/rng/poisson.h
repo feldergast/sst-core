@@ -90,7 +90,7 @@ public:
     /**
         Default constructor. FOR SERIALIZATION ONLY.
      */
-    PoissonDistribution() : RandomDistribution(), lambda(1.0) { }
+    PoissonDistribution() : RandomDistribution(), lambda(1.0) {}
 
     /**
         Serialization function for checkpoint
@@ -106,7 +106,7 @@ public:
         Serialization macro
     */
     ImplementSerializable(PoissonDistribution)
-    
+
 protected:
     /**
         Sets the lambda of the Poisson distribution.

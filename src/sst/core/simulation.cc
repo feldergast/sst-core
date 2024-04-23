@@ -572,18 +572,22 @@ Simulation_impl::initialize()
 void
 Simulation_impl::complete()
 {
+    TraceFunction trace(CALL_INFO_LONG, false);
     complete_phase_start_time = sst_get_cpu_time();
     completeBarrier.wait();
     untimed_phase = 0;
     // Walk through all the links and call prepareForComplete()
+    trace.output("Made it to line %d\n", __LINE__);
     for ( auto& i : compInfoMap ) {
         i->prepareForComplete();
     }
-
+    trace.output("Made it to line %d\n", __LINE__);
     syncManager->prepareForComplete();
+    trace.output("Made it to line %d\n", __LINE__);
 
     bool done = false;
     completeBarrier.wait();
+    trace.output("Made it to line %d\n", __LINE__);
 
     do {
         completeBarrier.wait();
@@ -602,7 +606,9 @@ Simulation_impl::complete()
 
         untimed_phase++;
     } while ( !done );
+    trace.output("Made it to line %d\n", __LINE__);
     complete_phase_total_time = sst_get_cpu_time() - complete_phase_start_time;
+    trace.output("Made it to line %d\n", __LINE__);
 }
 
 void
@@ -659,6 +665,7 @@ Simulation_impl::prepare_for_run()
 void
 Simulation_impl::run()
 {
+    TraceFunction trace(CALL_INFO_LONG, false);
 #if SST_PERFORMANCE_INSTRUMENTING
     std::string filename = "rank_" + std::to_string(my_rank.rank);
     filename += "_thread_" + std::to_string(my_rank.thread);
@@ -1036,12 +1043,17 @@ Simulation_impl::insertActivity(SimTime_t time, Activity* ev)
 uint64_t
 Simulation_impl::getTimeVortexMaxDepth() const
 {
+    TraceFunction trace(CALL_INFO_LONG, false);
+    trace.output("timeVortex = %p\n", timeVortex);
+    // return 0;
     return timeVortex->getMaxDepth();
 }
 
 uint64_t
 Simulation_impl::getTimeVortexCurrentDepth() const
 {
+    TraceFunction trace(CALL_INFO_LONG, false);
+    trace.output("timeVortex = %p\n", timeVortex);
     return timeVortex->getCurrentDepth();
 }
 
@@ -1591,15 +1603,19 @@ Simulation_impl::restart(Config* cfg)
         ser&           compInfo;
         compInfoMap.insert(compInfo);
     }
-
+    trace.output("Done deserializing components\n");
 
     fs.close();
     delete[] buffer;
 
+    trace.output("Printing simulation state\n");
     printSimulationState();
+    trace.output("Done printing simulation state\n");
 
     // Need to clean up the handlers in the TimeVortex
+    trace.output("Fixup handlers\n");
     timeVortex->fixup_handlers();
+    trace.output("Done with fixup handlers\n");
 }
 
 void

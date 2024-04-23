@@ -96,9 +96,9 @@ public:
         ser& deleteDistrib;
     }
 
- /**
-        Serialization macro
-    */
+    /**
+           Serialization macro
+       */
     ImplementSerializable(SST::RNG::ExponentialDistribution)
 
 protected:

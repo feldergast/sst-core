@@ -41,8 +41,16 @@ public:
 
     SubCompInterface(ComponentId_t id) : SubComponent(id) {}
     SubCompInterface(ComponentId_t id, Params& UNUSED(params)) : SubComponent(id) {}
+    SubCompInterface() : SubComponent() {}
     virtual ~SubCompInterface() {}
     virtual void clock(SST::Cycle_t) {}
+
+    void serialize_order(SST::Core::Serialization::serializer& ser) override
+    {
+        TraceFunction trace(CALL_INFO_LONG, false);
+        SST::SubComponent::serialize_order(ser);
+    }
+    ImplementSerializable(SST::CoreTestSubComponent::SubCompInterface)
 };
 
 class SubCompSlotInterface : public SubCompInterface
@@ -65,6 +73,14 @@ public:
     SubCompSlotInterface(ComponentId_t id) : SubCompInterface(id) {}
     SubCompSlotInterface(ComponentId_t id, Params& UNUSED(params)) : SubCompInterface(id) {}
     virtual ~SubCompSlotInterface() {}
+
+    SubCompSlotInterface() {}
+    void serialize_order(SST::Core::Serialization::serializer& ser) override
+    {
+        TraceFunction trace(CALL_INFO_LONG, false);
+        SubCompInterface::serialize_order(ser);
+    }
+    ImplementSerializable(SST::CoreTestSubComponent::SubCompSlotInterface)
 };
 
 /* Our trivial component */
@@ -102,6 +118,15 @@ public:
 
     SubComponentLoader(ComponentId_t id, SST::Params& params);
 
+    SubComponentLoader() {}
+    void serialize_order(SST::Core::Serialization::serializer& ser) override
+    {
+        TraceFunction trace(CALL_INFO_LONG, false);
+        SST::Component::serialize_order(ser);
+        ser& subComps;
+    }
+    ImplementSerializable(SST::CoreTestSubComponent::SubComponentLoader)
+
 private:
     bool                           tick(SST::Cycle_t);
     std::vector<SubCompInterface*> subComps;
@@ -133,6 +158,15 @@ public:
         {"mySubCompSlot", "Test slot", "SST::CoreTestSubComponent::SubCompInterface" }
     )
 
+    SubCompSlot() {}
+    void serialize_order(SST::Core::Serialization::serializer& ser) override
+    {
+        TraceFunction trace(CALL_INFO_LONG, false);
+        SubCompSlotInterface::serialize_order(ser);
+        ser& subComps;
+    }
+    ImplementSerializable(SST::CoreTestSubComponent::SubCompSlot)
+
 private:
     std::vector<SubCompInterface*> subComps;
 
@@ -142,7 +176,7 @@ public:
     SubCompSlot(ComponentId_t id, std::string unnamed_sub);
 
     ~SubCompSlot() {}
-    void clock(Cycle_t);
+    void clock(Cycle_t) override;
 };
 
 // Add in some extra levels of ELI hierarchy for testing
@@ -182,9 +216,18 @@ public:
         {"numRecv", "# of msgs recv", "", 1},
     )
 
+
     SubCompSendRecvInterface(ComponentId_t id) : SubCompInterface(id) {}
     SubCompSendRecvInterface(ComponentId_t id, Params& UNUSED(params)) : SubCompInterface(id) {}
     virtual ~SubCompSendRecvInterface() {}
+
+    SubCompSendRecvInterface() {}
+    void serialize_order(SST::Core::Serialization::serializer& ser) override
+    {
+        TraceFunction trace(CALL_INFO_LONG, false);
+        SubCompInterface::serialize_order(ser);
+    }
+    ImplementSerializable(SST::CoreTestSubComponent::SubCompSendRecvInterface)
 };
 
 class SubCompSender : public SubCompSendRecvInterface
@@ -216,6 +259,18 @@ public:
         {"test_slot", "Test slot", "" }
     )
 
+    SubCompSender() {}
+    void serialize_order(SST::Core::Serialization::serializer& ser) override
+    {
+        TraceFunction trace(CALL_INFO_LONG, false);
+        SubCompSendRecvInterface::serialize_order(ser);
+        ser& link;
+        ser& nToSend;
+        ser& nMsgSent;
+        ser& totalMsgSent;
+    }
+    ImplementSerializable(SST::CoreTestSubComponent::SubCompSender)
+
 private:
     Statistic<uint32_t>* nMsgSent;
     Statistic<uint32_t>* totalMsgSent;
@@ -227,7 +282,7 @@ public:
     // Direct API
     SubCompSender(ComponentId_t id, uint32_t nToSend, const std::string& port_name);
     ~SubCompSender() {}
-    void clock(Cycle_t);
+    void clock(Cycle_t) override;
 };
 
 class SubCompReceiver : public SubCompSendRecvInterface
@@ -261,6 +316,16 @@ public:
         SST_ELI_DELETE_SUBCOMPONENT_SLOT("test_slot")
     )
 
+    SubCompReceiver() {}
+    void serialize_order(SST::Core::Serialization::serializer& ser) override
+    {
+        TraceFunction trace(CALL_INFO_LONG, false);
+        SubCompSendRecvInterface::serialize_order(ser);
+        ser& link;
+        ser& nMsgReceived;
+    }
+    ImplementSerializable(SST::CoreTestSubComponent::SubCompReceiver)
+
 private:
     Statistic<uint32_t>* nMsgReceived;
     SST::Link*           link;
@@ -271,7 +336,7 @@ public:
     SubCompReceiver(ComponentId_t id, Params& params);
     SubCompReceiver(ComponentId_t id, std::string port);
     ~SubCompReceiver() {}
-    void clock(Cycle_t);
+    void clock(Cycle_t) override;
 };
 
 } // namespace CoreTestSubComponent

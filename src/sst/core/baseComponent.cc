@@ -827,11 +827,11 @@ BaseComponent::serialize_order(SST::Core::Serialization::serializer& ser)
 {
     TraceFunction trace(CALL_INFO_LONG, false);
     // printf("basecomponent = %p\n", my_info);
-    trace.output("BaseComponent->serialize_order %d\n", __LINE__);
+    trace.output("About to serialize my_info\n");
     ser& my_info;
-    trace.output("BaseComponent->serialize_order %d\n", __LINE__);
+    trace.output("my_info = %p\n", my_info);
     ser& isExtension;
-    trace.output("BaseComponent->serialize_order %d\n", __LINE__);
+    trace.output("isExtension = %d\n", isExtension);
 
     switch ( ser.mode() ) {
     case SST::Core::Serialization::serializer::SIZER:

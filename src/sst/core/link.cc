@@ -197,6 +197,7 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
             // Profile tools not yet supported
             // ser & s->profile_tools;
             s->send_queue = Simulation_impl::getSimulation()->getTimeVortex();
+            trace.output("send_queue = %p\n", s->send_queue);
         }
         else {
             trace.output("Link type = REGULAR (%d)\n", type);
@@ -275,6 +276,25 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
             trace.output("link->serialize_order UNPACK %d\n", __LINE__);
 
             s->send_queue = Simulation_impl::getSimulation()->getTimeVortex();
+            trace.output("send_queue = %p\n", s->send_queue);
+
+            // FIXME: Clean up for polling links.  For now just set
+            // send_queues to polling link to nullptr.  This will
+            // support links that set themselves as polling becuase
+            // they receive no events, but won't support real polling
+            // links.  Need to put in support for real polling links.
+            if ( pair_link ) {
+                if ( s->type == Link::POLL ) {
+                    // My pair link needs to have it's send_queue set
+                    // to nullptr
+                    s->pair_link->send_queue = nullptr;
+                }
+                else if ( pair_link->type == Link::POLL ) {
+                    // My link needs to have it's send_queue set to
+                    // nullptr
+                    s->send_queue = nullptr;
+                }
+            }
             //}
 
             // Profile tools not yet supported

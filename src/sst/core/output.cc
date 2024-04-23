@@ -504,7 +504,7 @@ Output::serialize_order(SST::Core::Serialization::serializer& ser)
     ser& m_targetLoc;
     ser& m_sstLocalFileName;
 
-    if (ser.mode() == SST::Core::Serialization::serializer::UNPACK && m_objInitialized) {
+    if ( ser.mode() == SST::Core::Serialization::serializer::UNPACK && m_objInitialized ) {
         // Set Member Variables
         m_sstLocalFileHandle       = nullptr;
         m_sstLocalFileAccessCount  = 0;
@@ -515,8 +515,6 @@ Output::serialize_order(SST::Core::Serialization::serializer& ser)
         setTargetOutput(m_targetLoc);
     }
 }
-
-
 
 
 thread_local std::vector<char> TraceFunction::indent_array(100, ' ');
@@ -548,6 +546,7 @@ TraceFunction::TraceFunction(uint32_t line, const char* file, const char* func, 
     indent_array[indent] = '\0';
     output_obj.output(line, file, func, "%s%s enter function\n", indent_array.data(), function.c_str());
     indent_array[indent] = ' ';
+    fflush(stdout);
     trace_level++;
 }
 
@@ -560,6 +559,7 @@ TraceFunction::~TraceFunction()
     output_obj.output(
         line, file.c_str(), function.c_str(), "%s%s exit function\n", indent_array.data(), function.c_str());
     indent_array[indent] = ' ';
+    fflush(stdout);
 }
 
 void
@@ -578,6 +578,7 @@ TraceFunction::output(const char* format, ...) const
     va_start(arg, format);
     output_obj.outputprintf(line, file.c_str(), function.c_str(), buf, arg);
     va_end(arg);
+    fflush(stdout);
 }
 
 } // namespace SST
