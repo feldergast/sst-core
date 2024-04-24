@@ -94,7 +94,7 @@ public:
     /**
         Default constructor. FOR SERIALIZATION ONLY.
      */
-    UniformDistribution() : RandomDistribution() {}
+    UniformDistribution() : RandomDistribution(), deleteDistrib(true), probCount(0) {}
 
     /**
         Serialization function for checkpoint
@@ -102,8 +102,8 @@ public:
     void serialize_order(SST::Core::Serialization::serializer& ser) override
     {
         ser& baseDistrib;
-        ser& deleteDistrib;
-        ser& probCount;
+        ser& const_cast<bool&>(deleteDistrib);
+        ser& const_cast<uint32_t&>(probCount);
         ser& probPerBin;
     }
 

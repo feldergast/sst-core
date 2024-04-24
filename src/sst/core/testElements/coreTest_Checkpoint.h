@@ -15,6 +15,7 @@
 #include "sst/core/component.h"
 #include "sst/core/event.h"
 #include "sst/core/link.h"
+#include "sst/core/rng/distrib.h"
 #include "sst/core/rng/rng.h"
 
 namespace SST {
@@ -80,8 +81,7 @@ public:
         { "rng_seed_z",        "The second seed for marsaglia", "5" },
         { "rng_seed",          "The seed for mersenne and xorshift", "11" },
         { "dist_const",        "Constant for ConstantDistribution", "1.5" },
-        { "dist_discrete_count", "Number of proabilities in discrete distribution", "1"},
-        { "dist_discrete_probs", "Probabilities in discrete distribution", "[1]"},
+        { "dist_discrete_probs", "Probabilities in discrete distribution", "[1.0]"},
         { "dist_exp_lambda",    "Lambda for exponentional distribution", "1.0"},
         { "dist_gauss_mean",    "Mean for Gaussian distribution", "1.0"},
         { "dist_gauss_stddev",  "Standard deviation for Gaussian distribution", "0.2"},
@@ -122,9 +122,15 @@ private:
     std::string         test_string;      // Test that string got serialized
     Output*             output;
 
-    RNG::Random* mersenne;
-    RNG::Random* marsaglia;
-    RNG::Random* xorshift;
+    RNG::Random*             mersenne;
+    RNG::Random*             marsaglia;
+    RNG::Random*             xorshift;
+    RNG::RandomDistribution* dist_const;
+    RNG::RandomDistribution* dist_discrete;
+    RNG::RandomDistribution* dist_expon;
+    RNG::RandomDistribution* dist_gauss;
+    RNG::RandomDistribution* dist_poisson;
+    RNG::RandomDistribution* dist_uniform;
 };
 
 } // namespace CoreTestCheckpoint

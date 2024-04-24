@@ -13,8 +13,14 @@
 
 #include "sst/core/testElements/coreTest_Checkpoint.h"
 
+#include "sst/core/rng/constant.h"
+#include "sst/core/rng/discrete.h"
+#include "sst/core/rng/expon.h"
+#include "sst/core/rng/gaussian.h"
 #include "sst/core/rng/marsaglia.h"
 #include "sst/core/rng/mersenne.h"
+#include "sst/core/rng/poisson.h"
+#include "sst/core/rng/uniform.h"
 #include "sst/core/rng/xorshift.h"
 
 #include <assert.h>
@@ -60,16 +66,23 @@ coreTestCheckpoint::coreTestCheckpoint(ComponentId_t id, Params& params) : Compo
         new RNG::MarsagliaRNG(params.find<unsigned int>("rng_seed_w", 7), params.find<unsigned int>("rng_seed_z", 5));
     mersenne = new RNG::MersenneRNG(params.find<unsigned int>("rng_seed", 11));
     xorshift = new RNG::XORShiftRNG(params.find<unsigned int>("rng_seed", 11));
-    /*
-            { "dist_const",        "Constant for ConstantDistribution", "1.5" },
-            { "dist_discrete_count", "Number of proabilities in discrete distribution", "1"},
-            { "dist_discrete_probs", "Probabilities in discrete distribution", "[1]"},
-            { "dist_exp_lambda",    "Lambda for exponentional distribution", "1.0"},
-            { "dist_gauss_mean",    "Mean for Gaussian distribution", "1.0"},
-            { "dist_gauss_stddev",  "Standard deviation for Gaussian distribution", "0.2"},
-            { "dist_poisson_lambda", "Lambda for Poisson distribution", "1.0"},
-            { "dist_uni_bins",      "Number of proability bins for the uniform distribution", "4"}
-            */
+
+    dist_const = new RNG::ConstantDistribution(params.find<double>("dist_const", 1.5));
+
+    std::vector<double> discrete_probs;
+    params.find_array<double>("dist_discrete_probs", discrete_probs);
+    if ( discrete_probs.empty() ) discrete_probs.push_back(1.0);
+
+    dist_discrete = new RNG::DiscreteDistribution(discrete_probs.data(), discrete_probs.size());
+
+    dist_expon = new RNG::ExponentialDistribution(params.find<double>("dist_exp_lambda", 1.0));
+
+    dist_gauss = new RNG::GaussianDistribution(
+        params.find<double>("dist_gauss_mean", 1.0), params.find<double>("dist_gauss_stddev", 0.2));
+
+    dist_poisson = new RNG::PoissonDistribution(params.find<double>("dist_poisson_lambda", 1.0));
+
+    dist_uniform = new RNG::UniformDistribution(params.find<uint32_t>("dist_uni_bins", 4));
 }
 
 coreTestCheckpoint::~coreTestCheckpoint() {}
@@ -113,7 +126,10 @@ coreTestCheckpoint::handleClock(Cycle_t cycle)
     output->output(
         "RNG: %" PRIu32 ", %" PRIu32 ", %" PRIu32 "\n", marsaglia->generateNextUInt32(), mersenne->generateNextUInt32(),
         xorshift->generateNextUInt32());
-
+    output->output(
+        "Distributions: %f, %f, %f, %f, %f, %f\n", dist_const->getNextDouble(), dist_discrete->getNextDouble(),
+        dist_expon->getNextDouble(), dist_gauss->getNextDouble(), dist_poisson->getNextDouble(),
+        dist_uniform->getNextDouble());
     duty_cycle_count--;
     if ( duty_cycle_count == 0 ) {
         duty_cycle_count = duty_cycle;
@@ -159,6 +175,12 @@ coreTestCheckpoint::serialize_order(SST::Core::Serialization::serializer& ser)
     ser& mersenne;
     ser& marsaglia;
     ser& xorshift;
+    ser& dist_const;
+    ser& dist_discrete;
+    ser& dist_expon;
+    ser& dist_gauss;
+    ser& dist_poisson;
+    ser& dist_uniform;
 }
 
 
