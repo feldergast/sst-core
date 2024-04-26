@@ -50,7 +50,6 @@ class Factory;
 class Link;
 class LinkMap;
 class Params;
-class SharedRegionManager;
 class SimulatorHeartbeat;
 class SyncBase;
 class SyncManager;
@@ -59,7 +58,6 @@ class TimeConverter;
 class TimeLord;
 class TimeVortex;
 class UnitAlgebra;
-class SharedRegionManager;
 
 namespace Statistics {
 class StatisticOutput;
@@ -508,8 +506,7 @@ public:
     RankInfo my_rank;
     RankInfo num_ranks;
 
-    std::string                 output_directory;
-    static SharedRegionManager* sharedRegionManager;
+    std::string output_directory;
 
     double run_phase_start_time;
     double run_phase_total_time;

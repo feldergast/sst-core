@@ -29,6 +29,7 @@ using namespace Shared;
 coreTestSharedObjectsComponent::coreTestSharedObjectsComponent(SST::ComponentId_t id, SST::Params& params) :
     Component(id),
     test_array(false),
+    test_bool_array(false),
     test_map(false),
     test_set(false),
     count(0),
@@ -43,12 +44,17 @@ coreTestSharedObjectsComponent::coreTestSharedObjectsComponent(SST::ComponentId_
 
     std::string obj_type = params.find<std::string>("object_type", "array");
     if ( obj_type == "array" ) { test_array = true; }
+    else if ( obj_type == "bool_array" ) {
+        test_bool_array = true;
+    }
     else if ( obj_type == "map" ) {
         test_map = true;
     }
     else if ( obj_type == "set" ) {
         test_set = true;
     }
+
+    checkpoint = params.find<bool>("checkpoint", false);
 
     myid = params.find<int>("myid", -1);
     if ( myid == -1 ) { out.fatal(CALL_INFO, 1, "ERROR: myid is a required parameter\n"); }
@@ -106,6 +112,29 @@ coreTestSharedObjectsComponent::coreTestSharedObjectsComponent(SST::ComponentId_
         }
         if ( pub ) array.publish();
     }
+    else if ( test_bool_array && !late_initialize ) {
+        if ( full_initialization ) {
+            if ( myid == 0 || (multiple_initializers && (myid == num_entities - 1)) ) {
+                bool_array.initialize("test_shared_bool_array", num_entities, -1, v_type);
+            }
+            else {
+                bool_array.initialize("test_shared_bool_array");
+            }
+            if ( double_initialize ) bool_array.initialize("test_shared_bool_array", num_entities, -1, v_type);
+
+            if ( myid == 0 || (multiple_initializers && (myid == num_entities - 1)) ) {
+                for ( int i = 0; i < num_entities; ++i ) {
+                    bool_array.write(i, (bool)((i + (conflicting_write ? myid : 0)) % 2));
+                }
+            }
+        }
+        else {
+            bool_array.initialize("test_shared_bool_array", myid + 1, -1, v_type);
+            if ( double_initialize ) bool_array.initialize("test_shared_bool_array", myid + 1, -1, v_type);
+            bool_array.write(myid, myid % 2);
+        }
+        if ( pub ) bool_array.publish();
+    }
     else if ( test_map && !late_initialize ) {
         if ( full_initialization ) {
             map.initialize("test_shared_map", v_type);
@@ -145,7 +174,7 @@ coreTestSharedObjectsComponent::coreTestSharedObjectsComponent(SST::ComponentId_
     primaryComponentDoNotEndSim();
 
     registerClock(
-        "1GHz", new Clock::Handler<coreTestSharedObjectsComponent>(this, &coreTestSharedObjectsComponent::tick));
+        "1GHz", new Clock::Handler2<coreTestSharedObjectsComponent, &coreTestSharedObjectsComponent::tick>(this));
 }
 
 void
@@ -159,6 +188,14 @@ coreTestSharedObjectsComponent::init(unsigned int UNUSED(phase))
         }
         if ( array.isFullyPublished() && !pub ) {
             out.fatal(CALL_INFO, 100, "ERROR: SharedArray fully published, but should not have been\n");
+        }
+    }
+    else if ( test_bool_array ) {
+        if ( !bool_array.isFullyPublished() && pub ) {
+            out.fatal(CALL_INFO, 100, "ERROR: SharedArray<bool> not fully published, but should have been\n");
+        }
+        if ( bool_array.isFullyPublished() && !pub ) {
+            out.fatal(CALL_INFO, 100, "ERROR: SharedArray<bool> fully published, but should not have been\n");
         }
     }
     else if ( test_map ) {
@@ -189,25 +226,49 @@ coreTestSharedObjectsComponent::setup()
     if ( test_array ) {
         if ( late_write ) { array.write(0, 10); }
         else {
+            std::string arrstr;
             for ( auto x : array ) {
                 if ( x < 0 ) { out.fatal(CALL_INFO, 100, "ERROR: SharedArray data is messed up\n"); }
+                if ( checkpoint ) { arrstr += std::to_string(x) + " "; }
             }
+            if ( checkpoint ) { out.output("@ Setup, Array = %s\n", arrstr.c_str()); }
+        }
+    }
+    else if ( test_bool_array ) {
+        if ( late_write ) { bool_array.write(0, true); }
+        else {
+            int         count = 0;
+            std::string arrstr;
+            for ( auto x : bool_array ) {
+                if ( x ) count++;
+                if ( checkpoint ) { arrstr += (x ? "true " : "false "); }
+            }
+            if ( count != (num_entities / 2) ) {
+                out.fatal(CALL_INFO, 100, "ERROR: SharedArray<bool> data is messed up\n");
+            }
+            if ( checkpoint ) { out.output("@ Setup, Array<bool> = %s\n", arrstr.c_str()); }
         }
     }
     else if ( test_map ) {
         if ( late_write ) { map.write(0, 10); }
         else {
+            std::string mapstr;
             for ( auto x : map ) {
                 if ( x.second < 0 ) { out.fatal(CALL_INFO, 100, "ERROR: SharedArray data is messed up\n"); }
+                if ( checkpoint ) { mapstr += "(" + std::to_string(x.first) + "," + std::to_string(x.second) + ") "; }
             }
+            if ( checkpoint ) { out.output("@ Setup, Map = %s\n", mapstr.c_str()); }
         }
     }
     else if ( test_set ) {
         if ( late_write ) { set.insert(setItem(0, 0)); }
         else {
+            std::string setstr;
             for ( auto x : set ) {
                 if ( x.key < 0 ) { out.fatal(CALL_INFO, 100, "ERROR: SharedSet data is messed up\n"); }
+                if ( checkpoint ) { setstr += std::to_string(x.key) + " "; }
             }
+            if ( checkpoint ) { out.output("@ Setup, Set = %s\n", setstr.c_str()); }
         }
     }
 }
@@ -218,7 +279,37 @@ coreTestSharedObjectsComponent::complete(unsigned int UNUSED(phase))
 
 void
 coreTestSharedObjectsComponent::finish()
-{}
+{
+    if ( !checkpoint ) return;
+    if ( test_array ) {
+        std::string arrstr;
+        for ( auto x : array ) {
+            arrstr += std::to_string(x) + " ";
+        }
+        out.output("@ Finish, Array = %s\n", arrstr.c_str());
+    }
+    else if ( test_bool_array ) {
+        std::string arrstr;
+        for ( auto x : bool_array ) {
+            arrstr += (x ? "true " : "false ");
+        }
+        out.output("@ Finish, Array<bool> = %s\n", arrstr.c_str());
+    }
+    else if ( test_map ) {
+        std::string mapstr;
+        for ( auto x : map ) {
+            mapstr += "(" + std::to_string(x.first) + "," + std::to_string(x.second) + ") ";
+        }
+        out.output("@ Finish, Map = %s\n", mapstr.c_str());
+    }
+    else if ( test_set ) {
+        std::string setstr;
+        for ( auto x : set ) {
+            setstr += std::to_string(x.key) + " ";
+        }
+        out.output("@ Finish, Set = %s\n", setstr.c_str());
+    }
+}
 
 bool coreTestSharedObjectsComponent::tick(SST::Cycle_t)
 {
@@ -227,6 +318,14 @@ bool coreTestSharedObjectsComponent::tick(SST::Cycle_t)
         // Just check one entry per clock tick
         if ( test_array ) {
             if ( array[count] != count ) { out.fatal(CALL_INFO, 101, "SharedArray does not have the correct data\n"); }
+        }
+        else if ( test_bool_array ) {
+            if ( checkpoint ) {
+                out.output("Clock, SharedArray[%" PRIu32 "]=%s\n", count, (bool_array[count] ? "true" : "false"));
+            }
+            if ( bool_array[count] != (bool)(count % 2) ) {
+                out.fatal(CALL_INFO, 101, "SharedArray<bool> does not have the correct data\n");
+            }
         }
         else if ( test_map ) {
             if ( map[count] != count ) { out.fatal(CALL_INFO, 101, "SharedMap does not have the correct data\n"); }
@@ -240,6 +339,30 @@ bool coreTestSharedObjectsComponent::tick(SST::Cycle_t)
         return true;
     }
     return false;
+}
+
+void
+coreTestSharedObjectsComponent::serialize_order(SST::Core::Serialization::serializer& ser)
+{
+    Component::serialize_order(ser);
+    ser& out;
+    ser& test_array;
+    ser& test_bool_array;
+    ser& test_map;
+    ser& test_set;
+    ser& myid;
+    ser& num_entities;
+    ser& count;
+    ser& check;
+    ser& late_write;
+    ser& pub;
+    ser& late_initialize;
+    ser& checkpoint;
+
+    if ( test_array ) ser& array;
+    if ( test_bool_array ) ser& bool_array;
+    if ( test_map ) ser& map;
+    if ( test_set ) ser& set;
 }
 
 } // namespace CoreTestSharedObjectsComponent

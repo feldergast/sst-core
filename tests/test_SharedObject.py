@@ -29,6 +29,10 @@ if __name__ == "__main__":
 
     num_entities = int(params["num_entities"])
 
+    if "checkpoint" in params and params["checkpoint"] == "true":
+        cpt_period = str(num_entities // 2) + "ns"
+        sst.setProgramOption("checkpoint-period", cpt_period)
+
     for x in range(num_entities):
         comp = sst.Component("obj%d"%x, "coreTestElement.coreTestSharedObjectsComponent")
         comp.addParams(params)

@@ -311,7 +311,7 @@ coreTestSerialization::coreTestSerialization(ComponentId_t id, Params& params) :
     }
     else if ( test == "ordered_containers" ) {
         // Ordered Containers
-        // map, set, vector, list, deque
+        // map, set, vector, vector<bool>, list, deque
         std::map<int32_t, int32_t> map_in;
         for ( int i = 0; i < 10; ++i )
             map_in[rng->generateNextInt32()] = rng->generateNextInt32();
@@ -329,6 +329,12 @@ coreTestSerialization::coreTestSerialization(ComponentId_t id, Params& params) :
             vector_in.push_back(rng->generateNextInt32());
         passed = checkContainerSerializeDeserialize(vector_in);
         if ( !passed ) out.output("ERROR: vector<int32_t> did not serialize/deserialize properly\n");
+
+        std::vector<bool> vector_in_bool;
+        for ( int i = 0; i < 10; ++i )
+            vector_in_bool.push_back((rng->generateNextUInt32() % 2));
+        passed = checkContainerSerializeDeserialize(vector_in_bool);
+        if ( !passed ) out.output("ERROR: vector<bool> did not serialize/deserialize properly\n");
 
         std::list<int32_t> list_in;
         for ( int i = 0; i < 10; ++i )

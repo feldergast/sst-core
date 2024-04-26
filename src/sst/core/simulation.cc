@@ -1389,6 +1389,9 @@ Simulation_impl::checkpoint()
     ser& syncManager;
     ser& m_heartbeat;
 
+    // Add shared regions
+    ser& SharedObject::manager;
+
     // Serialize the clockmap
     ser& clockMap;
 
@@ -1425,6 +1428,9 @@ Simulation_impl::checkpoint()
     ser& m_exit;
     ser& syncManager;
     ser& m_heartbeat;
+
+    // Add shared regions
+    ser& SharedObject::manager;
 
     ser& clockMap;
 
@@ -1467,7 +1473,6 @@ Simulation_impl::checkpoint()
 
     /*
      * Still needs to be added to checkpoint:
-     *  - static SharedRegionManager* sharedRegionManager;
      *  - SST::Statistics::StatisticProcessingEngine stat_engine;
      *  - oneShotMap_t oneShotMap;
      *  - Output sim_output;
@@ -1571,7 +1576,8 @@ Simulation_impl::restart(Config* cfg)
     trace.output("here3.2\n");
     ser& m_heartbeat;
     trace.output("here3.3\n");
-
+    // Add shared regions
+    ser& SharedObject::manager;
     ser& clockMap;
     // Last, get the timevortex
     ser& timeVortex;
@@ -1667,7 +1673,6 @@ Simulation_impl::printSimulationState()
     /*
      * Not printing YET
      * - stat engine
-     * - sharedRegionManager
      *
      * Not printing
      *  - current_activity

@@ -64,6 +64,58 @@ public:
     }
 };
 
+template <>
+class serialize<std::vector<bool>>
+{
+    typedef std::vector<bool> Vector;
+
+public:
+    void operator()(Vector& v, serializer& ser)
+    {
+        // TraceFunction trace(CALL_INFO_LONG, false);
+        switch ( ser.mode() ) {
+        case serializer::SIZER:
+        {
+            size_t size = v.size();
+            ser.size(size);
+            bool val;
+            for ( auto it = v.begin(); it != v.end(); it++ ) {
+                val = *it;
+                ser& val;
+            }
+            break;
+        }
+        case serializer::PACK:
+        {
+            // trace.output("PACK\n");
+            size_t size = v.size();
+            ser.pack(size);
+            for ( auto it = v.begin(); it != v.end(); it++ ) {
+                bool val = *it;
+                ser& val;
+            }
+            // trace.output("vector size = %zu\n", size);
+            break;
+        }
+        case serializer::UNPACK:
+        {
+            // trace.output("UNPACK\n");
+            size_t s;
+            ser.unpack(s);
+            // trace.output("vector size = %zu\n", s);
+            v.resize(s);
+            for ( size_t i = 0; i < v.size(); i++ ) {
+                bool val = false;
+                ser& val;
+                v[i] = val;
+            }
+            break;
+        }
+        }
+    }
+};
+
+
 } // namespace Serialization
 } // namespace Core
 } // namespace SST
