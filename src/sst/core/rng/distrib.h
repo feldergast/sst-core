@@ -12,10 +12,10 @@
 #ifndef SST_CORE_RNG_DISTRIB_H
 #define SST_CORE_RNG_DISTRIB_H
 
+#include "sst/core/serialization/serializable.h"
+
 namespace SST {
 namespace RNG {
-
-#include "sst/core/serialization/serializable.h"
 
 /**
  * \class RandomDistribution
@@ -34,12 +34,12 @@ public:
     /**
         Destroys the distribution
     */
-    virtual ~RandomDistribution() {};
+    virtual ~RandomDistribution() {}
 
     /**
         Creates the base (abstract) class of a distribution
     */
-    RandomDistribution() {};
+    RandomDistribution() {}
 
     virtual void serialize_order(SST::Core::Serialization::serializer& UNUSED(ser)) override {}
 
