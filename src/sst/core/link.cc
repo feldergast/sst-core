@@ -117,8 +117,13 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
             ser & s->tag;
             trace.output("type = %" PRIu16 ", mode = %" PRIu16 ":, tag = %" PRIu32 "\n", s->type, s->mode, s->tag);
 
-            // send_queue will be recreated after deserialization, no
-            // need to serialize (polling links not supported)
+            if ( s->type == Link::POLL ) {
+                // If I'm a polling link, I need to serialize my
+                // pair's send_queue.  For HANDLER and SYNC links, the
+                // send_queue will be reinitialized after restart
+                PollingLinkQueue* queue = dynamic_cast<PollingLinkQueue*>(s->pair_link->send_queue);
+                ser & queue;
+            }
 
             // My delivery_info is stored in my pair_link.
             // pair_link->delivery_info is an Event::Handler if the
@@ -196,6 +201,7 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
             ser & s->tag;
             // Profile tools not yet supported
             // ser & s->profile_tools;
+
             s->send_queue = Simulation_impl::getSimulation()->getTimeVortex();
             trace.output("send_queue = %p\n", s->send_queue);
         }
@@ -241,6 +247,20 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
             ser & s->tag;
             trace.output("type = %" PRIu16 ", mode = %" PRIu16 ":, tag = %" PRIu32 "\n", s->type, s->mode, s->tag);
 
+            if ( s->type == Link::POLL ) {
+                // If I'm a polling link, need to deserialize my
+                // pair's send_queue. For now, I will store it in my
+                // own send_queue variable and swap once we have both
+                // links.
+                PollingLinkQueue* queue;
+                ser & queue;
+                s->send_queue = queue;
+            }
+            else {            
+                s->send_queue = Simulation_impl::getSimulation()->getTimeVortex();
+            }
+            trace.output("send_queue = %p\n", s->send_queue);
+            
             if ( s->type == Link::SYNC ) { ser & s->delivery_info; }
             else {
                 uintptr_t delivery_info;
@@ -254,11 +274,17 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
                 Simulation_impl::getSimulation()->event_handler_restart_tracking[delivery_info] = s->delivery_info;
             }
 
-            // If we have a pair link already, swap delivery_info
+            // If we have a pair link already, swap delivery_info and
+            // send_queue
             if ( pair_link ) {
                 uintptr_t temp              = s->delivery_info;
                 s->delivery_info            = s->pair_link->delivery_info;
                 s->pair_link->delivery_info = temp;
+
+                // Swap the queues
+                ActivityQueue* queue = s->send_queue;
+                s->send_queue = s->pair_link->send_queue;
+                s->pair_link->send_queue = queue;
             }
 
             ser & s->defaultTimeBase;
@@ -275,8 +301,6 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
             else {*/
             trace.output("link->serialize_order UNPACK %d\n", __LINE__);
 
-            s->send_queue = Simulation_impl::getSimulation()->getTimeVortex();
-            trace.output("send_queue = %p\n", s->send_queue);
 
             // FIXME: Clean up for polling links.  For now just set
             // send_queues to polling link to nullptr.  This will

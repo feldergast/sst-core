@@ -86,7 +86,7 @@ public:
     /**
      * Serialization function for checkpoint
      */
-    void serialize_order(SST::Core::Serialization::serializer& ser);
+    void serialize_order(SST::Core::Serialization::serializer& ser) override;
 
     /**
       Serialization macro

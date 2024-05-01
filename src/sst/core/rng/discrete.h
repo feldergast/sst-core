@@ -93,7 +93,7 @@ public:
         \return The next random double from the discrete distribution, this is the double converted of the index where
        the probability is located
     */
-    double getNextDouble()
+    double getNextDouble() override
     {
         const double nextD = baseDistrib->nextUniform();
 

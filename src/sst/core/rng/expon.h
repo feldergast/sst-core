@@ -69,7 +69,7 @@ public:
         Gets the next (random) double value in the distribution
         \return The next random double from the distribution
     */
-    double getNextDouble()
+    double getNextDouble() override
     {
         const double next = baseDistrib->nextUniform();
         return log(1 - next) / (-1 * lambda);

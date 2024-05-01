@@ -46,7 +46,7 @@ public:
         value specified by the user
         \return Constant value specified by the user when creating the class
     */
-    double getNextDouble() { return mean; }
+    double getNextDouble() override { return mean; }
 
     /**
         Gets the constant value for the distribution

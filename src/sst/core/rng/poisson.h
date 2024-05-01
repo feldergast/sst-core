@@ -67,7 +67,7 @@ public:
         Gets the next (random) double value in the distribution
         \return The next random double from the distribution
     */
-    double getNextDouble()
+    double getNextDouble() override
     {
         const double L = exp(-lambda);
         double       p = 1.0;
