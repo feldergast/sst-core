@@ -615,7 +615,7 @@ public:
         {
             std::string name;
             ser&        name;
-            data               = manager.getSharedObjectData<Data>(name);
+            data = manager.getSharedObjectData<Data>(name);
             break;
         }
         };

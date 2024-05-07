@@ -40,6 +40,7 @@ SubComponentLoader::SubComponentLoader(ComponentId_t id, Params& params) : Compo
     if ( unnamed_sub != "" ) {
         for ( int i = 0; i < num_subcomps; ++i ) {
             params.insert("port_name", std::string("port") + std::to_string(i));
+            params.insert("verbose", params.find<std::string>("verbose", "0"));
             SubCompInterface* sci = loadAnonymousSubComponent<SubCompInterface>(
                 unnamed_sub, "mySubComp", i, ComponentInfo::SHARE_PORTS | ComponentInfo::INSERT_STATS, params);
             subComps.push_back(sci);
@@ -81,6 +82,7 @@ SubCompSlot::SubCompSlot(ComponentId_t id, Params& params) : SubCompSlotInterfac
     if ( unnamed_sub != "" ) {
         for ( int i = 0; i < num_subcomps; ++i ) {
             params.insert("port_name", std::string("slot_port") + std::to_string(i));
+            params.insert("verbose", params.find<std::string>("verbose", "0"));
             SubCompInterface* sci = loadAnonymousSubComponent<SubCompInterface>(
                 unnamed_sub, "mySubCompSlot", i, ComponentInfo::SHARE_PORTS | ComponentInfo::INSERT_STATS, params);
             subComps.push_back(sci);
@@ -130,6 +132,7 @@ SubCompSender::SubCompSender(ComponentId_t id, Params& params) : SubCompSendRecv
         totalMsgSent = NULL;
     }
     nToSend = params.find<uint32_t>("sendCount", 10);
+    out     = new SST::Output("", params.find<uint32_t>("verbose", 0), 0, SST::Output::output_location_t::STDOUT);
 }
 
 void
@@ -142,7 +145,7 @@ SubCompSender::clock(Cycle_t cyc)
         if ( nMsgSent ) nMsgSent->addData(1);
         if ( totalMsgSent ) totalMsgSent->addData(1);
         nToSend--;
-        printf("Sent and event, %d more to send\n", nToSend);
+        out->verbose(CALL_INFO, 1, 0, "Sent an event, %d more to send\n", nToSend);
     }
 }
 
@@ -164,6 +167,7 @@ SubCompReceiver::SubCompReceiver(ComponentId_t id, Params& params) : SubCompSend
     if ( !link ) { Output::getDefaultObject().fatal(CALL_INFO, -1, "Failed to configure port 'recvPort'\n"); }
     // registerTimeBase("1GHz", true);
     nMsgReceived = registerStatistic<uint32_t>("numRecv", "");
+    out          = new SST::Output("", params.find<uint32_t>("verbose", 0), 0, SST::Output::output_location_t::STDOUT);
 }
 
 void
@@ -175,7 +179,7 @@ SubCompReceiver::clock(Cycle_t UNUSED(cyc))
 void
 SubCompReceiver::handleEvent(Event* ev)
 {
-    printf("Got an event\n");
+    out->verbose(CALL_INFO, 1, 0, "Got an event\n");
     if ( nMsgReceived ) nMsgReceived->addData(1);
     delete ev;
 }

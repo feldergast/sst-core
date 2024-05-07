@@ -63,7 +63,6 @@ serializable_factory::add_builder(serializable_builder* builder, const char* nam
         abort();
     }
     current = builder;
-    printf("%s, %" PRIu32 "\n", name, hash);
     return hash;
 }
 

@@ -14,9 +14,6 @@
 
 #include "sst/core/serialization/serializer.h"
 
-// REMOVE ME
-//#include "sst/core/output.h"
-
 #include <vector>
 
 namespace SST {
@@ -31,7 +28,6 @@ class serialize<std::vector<T>>
 public:
     void operator()(Vector& v, serializer& ser)
     {
-        // TraceFunction trace(CALL_INFO_LONG, false);
         switch ( ser.mode() ) {
         case serializer::SIZER:
         {
@@ -41,18 +37,14 @@ public:
         }
         case serializer::PACK:
         {
-            // trace.output("PACK\n");
             size_t size = v.size();
             ser.pack(size);
-            // trace.output("vector size = %zu\n", size);
             break;
         }
         case serializer::UNPACK:
         {
-            // trace.output("UNPACK\n");
             size_t s;
             ser.unpack(s);
-            // trace.output("vector size = %zu\n", s);
             v.resize(s);
             break;
         }
@@ -72,7 +64,6 @@ class serialize<std::vector<bool>>
 public:
     void operator()(Vector& v, serializer& ser)
     {
-        // TraceFunction trace(CALL_INFO_LONG, false);
         switch ( ser.mode() ) {
         case serializer::SIZER:
         {
@@ -87,22 +78,18 @@ public:
         }
         case serializer::PACK:
         {
-            // trace.output("PACK\n");
             size_t size = v.size();
             ser.pack(size);
             for ( auto it = v.begin(); it != v.end(); it++ ) {
                 bool val = *it;
                 ser& val;
             }
-            // trace.output("vector size = %zu\n", size);
             break;
         }
         case serializer::UNPACK:
         {
-            // trace.output("UNPACK\n");
             size_t s;
             ser.unpack(s);
-            // trace.output("vector size = %zu\n", s);
             v.resize(s);
             for ( size_t i = 0; i < v.size(); i++ ) {
                 bool val = false;

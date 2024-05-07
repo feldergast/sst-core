@@ -58,7 +58,6 @@ RankSyncParallelSkip::RankSyncParallelSkip(RankInfo num_ranks, TimeConverter* UN
     slaveExchangeDoneBarrier(num_ranks.thread),
     allDoneBarrier(num_ranks.thread)
 {
-    // TraceFunction(CALL_INFO_LONG);
     max_period     = Simulation_impl::getSimulation()->getMinPartTC();
     myNextSyncTime = max_period->getFactor();
     recv_count     = new int[num_ranks.thread];
@@ -157,7 +156,6 @@ RankSyncParallelSkip::getDataSize() const
 void
 RankSyncParallelSkip::execute(int thread)
 {
-    // TraceFunction trace(CALL_INFO_LONG);
     if ( thread == 0 ) {
         exchange_master(thread);
         allDoneBarrier.wait(); /* Sync up with slave finish below */

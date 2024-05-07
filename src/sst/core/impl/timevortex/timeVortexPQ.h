@@ -49,11 +49,7 @@ public:
     void print(Output& out) const override;
 
     uint64_t getCurrentDepth() const override { return current_depth; }
-    uint64_t getMaxDepth() const override
-    {
-        TraceFunction trace(CALL_INFO_LONG, false);
-        return max_depth;
-    }
+    uint64_t getMaxDepth() const override { return max_depth; }
 
     void dbg_print(Output& out) override;
 

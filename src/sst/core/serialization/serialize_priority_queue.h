@@ -67,10 +67,8 @@ public:
         {
             size_t size;
             ser.unpack(size);
-            printf("Unpack priority queue, size = %zu\n", size);
             for ( size_t i = 0; i < size; ++i ) {
-                T t = {};
-                printf("Attempt serialization of item %zu\n", i);
+                T    t = {};
                 ser& t;
                 v.push(t);
             }

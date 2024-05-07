@@ -468,8 +468,6 @@ SyncManager::addProfileTool(Profile::SyncProfileTool* tool)
 void
 SyncManager::serialize_order(SST::Core::Serialization::serializer& ser)
 {
-    TraceFunction trace(CALL_INFO_LONG, false);
-
     Action::serialize_order(ser);
 
     // AHHHHHHHHHHHHHHHHH

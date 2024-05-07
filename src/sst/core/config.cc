@@ -468,6 +468,13 @@ public:
         return 0;
     }
 
+    // Set the prefix for checkpoint files
+    static int setCheckpointPrefix(Config* cfg, const std::string& arg)
+    {
+        cfg->checkpoint_prefix_ = arg;
+        return 0;
+    }
+
     // Advanced options - environment
 
     // Disable signal handlers
@@ -506,6 +513,8 @@ Config::print()
     std::cout << "timeBase = " << timeBase_ << std::endl;
     std::cout << "parallel_load = " << parallel_load_ << std::endl;
     std::cout << "load_checkpoint = " << load_from_checkpoint_ << std::endl;
+    std::cout << "checkpoint_period = " << checkpoint_period_ << std::endl;
+    std::cout << "checkpoint_prefix = " << checkpoint_prefix_ << std::endl;
     std::cout << "timeVortex = " << timeVortex_ << std::endl;
     std::cout << "interthread_links = " << interthread_links_ << std::endl;
 #ifdef USE_MEMPOOL
@@ -610,6 +619,7 @@ Config::Config(uint32_t num_ranks, bool first_rank) : ConfigShared(!first_rank, 
     // Advanced Options - Checkpointing
     checkpoint_period_    = "";
     load_from_checkpoint_ = false;
+    checkpoint_prefix_    = "";
 
     // Advanced Options - environment
     enable_sig_handling_ = true;
@@ -806,12 +816,15 @@ Config::insertOptions()
     DEF_ARG(
         "checkpoint-period", 0, "PERIOD",
         "Set frequency for checkpoints to be generated (this is an approximate timing and specified in simulated "
-        "time.\n ",
+        "time.",
         std::bind(&ConfigHelper::setCheckpointPeriod, this, _1), true);
     DEF_FLAG(
         "load-checkpoint", 0,
         "Load checkpoint and continue simulation. Specified SDL file will be used as the checkpoint file.",
         std::bind(&ConfigHelper::setLoadFromCheckpoint, this, _1), false);
+    DEF_ARG(
+        "checkpoint-prefix", 0, "PREFIX", "Set prefix for checkpoint filenames.",
+        std::bind(&ConfigHelper::setCheckpointPrefix, this, _1), true);
 
     enableDashDashSupport(std::bind(&ConfigHelper::setModelOptions, this, _1));
     addPositionalCallback(std::bind(&Config::positionalCallback, this, _1, _2));

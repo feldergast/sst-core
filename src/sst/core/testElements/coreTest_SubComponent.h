@@ -47,7 +47,6 @@ public:
 
     void serialize_order(SST::Core::Serialization::serializer& ser) override
     {
-        TraceFunction trace(CALL_INFO_LONG, false);
         SST::SubComponent::serialize_order(ser);
     }
     ImplementSerializable(SST::CoreTestSubComponent::SubCompInterface)
@@ -75,11 +74,7 @@ public:
     virtual ~SubCompSlotInterface() {}
 
     SubCompSlotInterface() {}
-    void serialize_order(SST::Core::Serialization::serializer& ser) override
-    {
-        TraceFunction trace(CALL_INFO_LONG, false);
-        SubCompInterface::serialize_order(ser);
-    }
+    void serialize_order(SST::Core::Serialization::serializer& ser) override { SubCompInterface::serialize_order(ser); }
     ImplementSerializable(SST::CoreTestSubComponent::SubCompSlotInterface)
 };
 
@@ -101,6 +96,7 @@ public:
         {"clock", "Clock Rate", "1GHz"},
         {"unnamed_subcomponent", "Unnamed SubComponent to load.  If empty, then a named subcomponent is loaded", ""},
         {"num_subcomps","Number of anonymous SubComponents to load.  Ignored if using name SubComponents.","1"},
+        {"verbose", "Verbosity level", "0"},
     )
 
     SST_ELI_DOCUMENT_STATISTICS(
@@ -121,7 +117,6 @@ public:
     SubComponentLoader() {}
     void serialize_order(SST::Core::Serialization::serializer& ser) override
     {
-        TraceFunction trace(CALL_INFO_LONG, false);
         SST::Component::serialize_order(ser);
         ser& subComps;
     }
@@ -146,7 +141,8 @@ public:
     )
 
     SST_ELI_DOCUMENT_PARAMS(
-        {"unnamed_subcomponent", "Unnamed SubComponent to load.  If empty, then a named subcomponent is loaded", ""}
+        {"unnamed_subcomponent", "Unnamed SubComponent to load.  If empty, then a named subcomponent is loaded", ""},
+        {"verbose", "Verbosity level", "0"},
     )
 
     // Only used when loading unnamed SubComponents
@@ -161,7 +157,6 @@ public:
     SubCompSlot() {}
     void serialize_order(SST::Core::Serialization::serializer& ser) override
     {
-        TraceFunction trace(CALL_INFO_LONG, false);
         SubCompSlotInterface::serialize_order(ser);
         ser& subComps;
     }
@@ -198,7 +193,8 @@ public:
 
     SST_ELI_DOCUMENT_PARAMS(
         {"port_name", "Name of port to connect to", ""},
-        {"sendCount", "Number of Messages to Send", "10"}
+        {"sendCount", "Number of Messages to Send", "10"},
+        {"verbose",   "Verbosity level", "0"}
     )
 
     SST_ELI_DOCUMENT_PORTS(
@@ -222,11 +218,7 @@ public:
     virtual ~SubCompSendRecvInterface() {}
 
     SubCompSendRecvInterface() {}
-    void serialize_order(SST::Core::Serialization::serializer& ser) override
-    {
-        TraceFunction trace(CALL_INFO_LONG, false);
-        SubCompInterface::serialize_order(ser);
-    }
+    void serialize_order(SST::Core::Serialization::serializer& ser) override { SubCompInterface::serialize_order(ser); }
     ImplementSerializable(SST::CoreTestSubComponent::SubCompSendRecvInterface)
 };
 
@@ -262,12 +254,12 @@ public:
     SubCompSender() {}
     void serialize_order(SST::Core::Serialization::serializer& ser) override
     {
-        TraceFunction trace(CALL_INFO_LONG, false);
         SubCompSendRecvInterface::serialize_order(ser);
         ser& link;
         ser& nToSend;
         ser& nMsgSent;
         ser& totalMsgSent;
+        ser& out;
     }
     ImplementSerializable(SST::CoreTestSubComponent::SubCompSender)
 
@@ -276,6 +268,7 @@ private:
     Statistic<uint32_t>* totalMsgSent;
     uint32_t             nToSend;
     SST::Link*           link;
+    SST::Output*         out;
 
 public:
     SubCompSender(ComponentId_t id, Params& params);
@@ -319,16 +312,17 @@ public:
     SubCompReceiver() {}
     void serialize_order(SST::Core::Serialization::serializer& ser) override
     {
-        TraceFunction trace(CALL_INFO_LONG, false);
         SubCompSendRecvInterface::serialize_order(ser);
         ser& link;
         ser& nMsgReceived;
+        ser& out;
     }
     ImplementSerializable(SST::CoreTestSubComponent::SubCompReceiver)
 
 private:
     Statistic<uint32_t>* nMsgReceived;
     SST::Link*           link;
+    SST::Output*         out;
 
     void handleEvent(SST::Event* ev);
 

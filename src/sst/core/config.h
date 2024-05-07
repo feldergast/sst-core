@@ -237,6 +237,11 @@ public:
     bool load_from_checkpoint() const { return load_from_checkpoint_; }
 
     /**
+       Prefix for checkpoint filenames and directory
+    */
+    const std::string& checkpoint_prefix() const { return checkpoint_prefix_; }
+
+    /**
        TimeVortex implementation to use
     */
     const std::string& timeVortex() const { return timeVortex_; }
@@ -402,6 +407,7 @@ public:
 #endif
         ser& load_from_checkpoint_;
         ser& checkpoint_period_;
+        ser& checkpoint_prefix_;
 
         ser& print_env_;
         ser& enable_sig_handling_;
@@ -498,6 +504,8 @@ private:
     // Advanced options - checkpoint
     bool        load_from_checkpoint_; /*!< If true, load from checkpoint instead of config file */
     std::string checkpoint_period_;    /*!< Simulated time interval to generate checkpoints at */
+    std::string checkpoint_prefix_;    /*!< Prefix for checkpoint filename and checkpoint directory */
+    std::string checkpoint_directory_; /*!< Directory to write checkpoints to */
 
     // Advanced options - envrionment
     bool enable_sig_handling_; /*!< Enable signal handling */

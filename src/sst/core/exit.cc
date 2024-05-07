@@ -132,7 +132,6 @@ Exit::getRefCount()
 void
 Exit::execute()
 {
-    TraceFunction trace(CALL_INFO_LONG, false);
     check();
 
     // Only gets put into queue once, no need to reschedule
@@ -155,11 +154,9 @@ Exit::computeEndTime()
     return end_time;
 }
 
-// bool Exit::handler( Event* e )
 void
 Exit::check()
 {
-    // TraceFunction trace(CALL_INFO_LONG);
     int value = (m_refCount > 0);
     int out;
 

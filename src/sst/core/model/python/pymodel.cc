@@ -370,6 +370,9 @@ getProgramOptions(PyObject* UNUSED(self), PyObject* UNUSED(args))
     PyDict_SetItem(
         dict, SST_ConvertToPythonString("checkpoint-period"),
         SST_ConvertToPythonString(cfg->checkpoint_period().c_str()));
+    PyDict_SetItem(
+        dict, SST_ConvertToPythonString("checkpoint-prefix"),
+        SST_ConvertToPythonString(cfg->checkpoint_prefix().c_str()));
 
     return dict;
 }

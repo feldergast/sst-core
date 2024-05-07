@@ -33,15 +33,14 @@ namespace SST {
 void
 SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core::Serialization::serializer& ser)
 {
-    TraceFunction trace(CALL_INFO_LONG, false);
     // Need to treat Links and SelfLinks differently
-    bool          self_link;
+    bool    self_link;
     // Type of link (Link is not polymorphic, so we can't use
     // dynamic_cast to see which type it is):
     // 0 - nullptr
     // 1 - Link
     // 2 - SelfLink
-    int16_t       type;
+    int16_t type;
 
     switch ( ser.mode() ) {
     case serializer::SIZER:
@@ -49,14 +48,12 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
         // If s is nullptr, just put in a 0
         if ( nullptr == s ) {
             type = 0;
-            trace.output("Link type = nullptr (%d)\n", type);
             ser& type;
             return;
         }
         self_link = (s == s->pair_link);
         if ( self_link ) {
             type = 2;
-            trace.output("Link type = SELF (%d)\n", type);
             ser& type;
             // send_queue will be recreated after deserialization, no
             // need to serialize (polling links not supported)
@@ -84,7 +81,6 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
             // Regular link
             type = 1;
             ser& type;
-            trace.output("Link type = REGULAR (%d)\n", type);
 
             // Need to put a uintptr_t in for my pointer and my pair's
             // pointer.  This will be used to identify link
@@ -105,24 +101,21 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
             // side).
             uintptr_t ptr = reinterpret_cast<uintptr_t>(s);
             ser&      ptr;
-            trace.output("My pointer tag = %lu\n", ptr);
             ptr = reinterpret_cast<uintptr_t>(s->pair_link);
             ser& ptr;
-            trace.output("My pair pointer tag = %lu\n", ptr);
 
             // Store some of the data we'll need to make decisions
             // during unpacking
             ser & s->type;
             ser & s->mode;
             ser & s->tag;
-            trace.output("type = %" PRIu16 ", mode = %" PRIu16 ":, tag = %" PRIu32 "\n", s->type, s->mode, s->tag);
 
             if ( s->type == Link::POLL ) {
                 // If I'm a polling link, I need to serialize my
                 // pair's send_queue.  For HANDLER and SYNC links, the
                 // send_queue will be reinitialized after restart
                 PollingLinkQueue* queue = dynamic_cast<PollingLinkQueue*>(s->pair_link->send_queue);
-                ser & queue;
+                ser&              queue;
             }
 
             // My delivery_info is stored in my pair_link.
@@ -147,7 +140,6 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
                 // the numerical value of the pointer as a tag when
                 // restarting.
                 ser & s->pair_link->delivery_info;
-                trace.output("delivery_info = %lu (stored in pair link)\n", s->pair_link->delivery_info);
                 ser& handler;
             }
 
@@ -162,19 +154,15 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
         }
         break;
     case serializer::UNPACK:
-        trace.output("link->serialize_order UNPACK type %d\n", __LINE__);
         ser& type;
 
         // If we put in a nullptr, return a nullptr
         if ( type == 0 ) {
-            trace.output("Link type = nullptr (%d)\n", type);
             s = nullptr;
             return;
         }
 
         if ( type == 2 ) {
-            trace.output("Link type = SELF (%d)\n", type);
-
             // Self link
             s = new SelfLink();
             ser.report_new_pointer(reinterpret_cast<uintptr_t>(s));
@@ -203,11 +191,8 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
             // ser & s->profile_tools;
 
             s->send_queue = Simulation_impl::getSimulation()->getTimeVortex();
-            trace.output("send_queue = %p\n", s->send_queue);
         }
         else {
-            trace.output("Link type = REGULAR (%d)\n", type);
-
             // Regular link
 
             // Pull out the tags for the two links
@@ -215,9 +200,7 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
             uintptr_t pair_tag;
 
             ser& my_tag;
-            trace.output("My pointer tag = %lu\n", my_tag);
             ser& pair_tag;
-            trace.output("My pair pointer tag = %lu\n", pair_tag);
 
             s = new Link();
             ser.report_new_pointer(reinterpret_cast<uintptr_t>(s));
@@ -226,7 +209,6 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
             // Need to check to see if my pair link has been unpacked
             auto& link_tracker = Simulation_impl::getSimulation()->link_restart_tracking;
             if ( link_tracker.count(pair_tag) ) {
-                trace.output("My pair link is already there\n");
                 pair_link = link_tracker[pair_tag];
                 link_tracker.erase(pair_tag);
 
@@ -237,7 +219,6 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
                 pair_link->pair_link = s;
             }
             else {
-                trace.output("My pair link is not there, add myself to tracker\n");
                 link_tracker[my_tag] = s;
             }
 
@@ -245,7 +226,6 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
             ser & s->type;
             ser & s->mode;
             ser & s->tag;
-            trace.output("type = %" PRIu16 ", mode = %" PRIu16 ":, tag = %" PRIu32 "\n", s->type, s->mode, s->tag);
 
             if ( s->type == Link::POLL ) {
                 // If I'm a polling link, need to deserialize my
@@ -253,19 +233,17 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
                 // own send_queue variable and swap once we have both
                 // links.
                 PollingLinkQueue* queue;
-                ser & queue;
+                ser&              queue;
                 s->send_queue = queue;
             }
-            else {            
+            else {
                 s->send_queue = Simulation_impl::getSimulation()->getTimeVortex();
             }
-            trace.output("send_queue = %p\n", s->send_queue);
-            
+
             if ( s->type == Link::SYNC ) { ser & s->delivery_info; }
             else {
                 uintptr_t delivery_info;
                 ser&      delivery_info;
-                trace.output("delivery_info = %lu\n", delivery_info);
 
                 Event::HandlerBase* handler;
                 ser&                handler;
@@ -282,8 +260,8 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
                 s->pair_link->delivery_info = temp;
 
                 // Swap the queues
-                ActivityQueue* queue = s->send_queue;
-                s->send_queue = s->pair_link->send_queue;
+                ActivityQueue* queue     = s->send_queue;
+                s->send_queue            = s->pair_link->send_queue;
                 s->pair_link->send_queue = queue;
             }
 
@@ -293,13 +271,6 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
             // s->pair_link taken care of above
             // s->current_time is automatically set on construction so
             // no need to serialize
-
-            // Need to recreate the send_queue
-            /*if ( s->pair_link->type == Link::SYNC ) {
-                // TODO: Need to reregister with the SyncManager
-            }
-            else {*/
-            trace.output("link->serialize_order UNPACK %d\n", __LINE__);
 
             // Profile tools not yet supported
             // ser & s->profile_tools;

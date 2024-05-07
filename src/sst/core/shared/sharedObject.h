@@ -262,10 +262,7 @@ public:
 
     void updateState(bool finalize);
 
-    void serialize_order(SST::Core::Serialization::serializer& ser) override
-    {
-        ser& shared_data;
-    }
+    void serialize_order(SST::Core::Serialization::serializer& ser) override { ser& shared_data; }
     ImplementSerializable(SST::Shared::SharedObjectDataManager)
 };
 

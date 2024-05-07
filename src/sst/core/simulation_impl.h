@@ -523,6 +523,7 @@ public:
     std::map<uintptr_t, uintptr_t> event_handler_restart_tracking;
     CheckpointAction*              m_checkpoint         = nullptr;
     uint32_t                       checkpoint_id        = 0;
+    std::string                    checkpointPrefix     = "";
     std::string                    globalOutputFileName = "";
 
     void printSimulationState();

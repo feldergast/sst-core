@@ -124,8 +124,6 @@ ComponentInfo::ComponentInfo(
     slot_num(ccomp->slot_num),
     share_flags(0)
 {
-    // printf("ComponentInfo(ConfigComponent): id = %llx\n",ccomp->id);
-
     // See how many subcomponents are in each slot so we know how to name them
     std::map<std::string, int> counts;
     for ( auto sc : ccomp->subComponents ) {
@@ -186,38 +184,25 @@ ComponentInfo::~ComponentInfo()
 void
 ComponentInfo::serialize_order(SST::Core::Serialization::serializer& ser)
 {
-    TraceFunction trace(CALL_INFO_LONG, false);
     ser& const_cast<ComponentId_t&>(id);
-    trace.output("id = %" PRIu64 "\n", id);
     ser& parent_info;
-    trace.output("parent_info=%p\n", parent_info);
     ser& const_cast<std::string&>(name);
-    trace.output("name = %s\n", name.c_str());
     ser& const_cast<std::string&>(type);
-    trace.output("type = %s\n", type.c_str());
-    trace.output("serializing component\n");
     ser& component;
-    trace.output("serializing linkmap\n");
     ser& link_map;
 
     // Not used after construction, no need to serialize
     // ser& params;
 
     ser& defaultTimeBase;
-    // trace.output("defaultTimeBase.factor = %" PRIu64 "\n", defaultTimeBase->getFactor());
-    trace.output("defaultTimeBase = %p\n", defaultTimeBase);
     // ser& statConfigs;
     // ser& allStatConfig;
     // ser& statLoadLevel;
     // ser& coordinates;
     ser& subIDIndex;
-    trace.output("subIDIndex = %" PRIu64 "\n", subIDIndex);
     ser& const_cast<std::string&>(slot_name);
-    trace.output("slot_name = %s\n", slot_name.c_str());
     ser& slot_num;
-    trace.output("slot_num = %d\n", slot_num);
     ser& share_flags;
-    trace.output("share_flags = %llx\n", share_flags);
 
     // For SubComponents map, need to serialize map by hand since we
     // weill need to use the track non-pointer as pointer feature in
@@ -226,7 +211,6 @@ ComponentInfo::serialize_order(SST::Core::Serialization::serializer& ser)
     // own SubCompenents that will need to point to the data location
     // in the map.
 
-    trace.output("Getting ready to serialize subComponents");
     // ser& subComponents;
     switch ( ser.mode() ) {
     case SST::Core::Serialization::serializer::SIZER:
@@ -255,18 +239,14 @@ ComponentInfo::serialize_order(SST::Core::Serialization::serializer& ser)
     {
         size_t size;
         ser&   size;
-        trace.output("UNPACK: size = %zu\n", size);
         for ( size_t i = 0; i < size; ++i ) {
             ComponentId_t key;
             ser&          key;
-            trace.output("key = %" PRIx64 "\n", key);
 
             auto p = subComponents.emplace(key, ComponentInfo {});
 
             ser | p.first->second;
-            trace.output("Made it to line %d\n", __LINE__);
         }
-        trace.output("Made it to line %d\n", __LINE__);
         break;
     }
     }

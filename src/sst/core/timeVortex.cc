@@ -34,7 +34,7 @@ unpack_timevortex(TimeVortex*& s, SST::Core::Serialization::serializer& ser)
 {
     std::string tv_type;
     ser&        tv_type;
-    printf("Creating time vortex type %s\n", tv_type.c_str());
+
     Params p;
     s = Factory::getFactory()->Create<TimeVortex>(tv_type, p);
     s->serialize_order(ser);
@@ -60,11 +60,10 @@ TimeVortex::fixup(Activity* act)
 
     int count = sim_->event_handler_restart_tracking.count(ev->delivery_info);
     if ( !count ) {
-        printf("ERROR: Handler tag not found\n");
+        Simulation_impl::getSimulation()->sim_output.fatal(CALL_INFO, 1, "ERROR: Handler tag not found\n");
         // Need to abort here
         return;
     }
-    printf("Fixing up handler\n");
     ev->delivery_info = sim_->event_handler_restart_tracking[ev->delivery_info];
 }
 

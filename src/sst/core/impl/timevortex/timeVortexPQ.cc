@@ -158,7 +158,7 @@ public:
 
     TimeVortexPQ(Params& params) : TimeVortexPQBase<false>(params) {}
     TimeVortexPQ() : TimeVortexPQBase<false>() {} // For serialization only
-    ~TimeVortexPQ() { TraceFunction trace(CALL_INFO_LONG, false); }
+    ~TimeVortexPQ() {}
 
     void serialize_order(SST::Core::Serialization::serializer& ser) { TimeVortexPQBase<false>::serialize_order(ser); }
 

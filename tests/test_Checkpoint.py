@@ -1,7 +1,5 @@
 import sst
 
-sst.setProgramOption("checkpoint-period", "500us")
-
 # Define the simulation components
 comp_c0 = sst.Component("c0", "coreTestElement.coreTestCheckpoint")
 comp_c0.addParams({

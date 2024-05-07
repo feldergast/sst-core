@@ -68,7 +68,7 @@ PollingLinkQueue::serialize_order(SST::Core::Serialization::serializer& ser)
     case SST::Core::Serialization::serializer::PACK:
     {
         size_t size = data.size();
-        ser& size;
+        ser&   size;
         for ( auto* x : data ) {
             ser& x;
         }
@@ -76,8 +76,8 @@ PollingLinkQueue::serialize_order(SST::Core::Serialization::serializer& ser)
     }
     case SST::Core::Serialization::serializer::UNPACK:
     {
-        size_t size;
-        ser& size;
+        size_t    size;
+        ser&      size;
         Activity* activity;
         for ( size_t i = 0; i < size; ++i ) {
             ser& activity;
@@ -88,4 +88,3 @@ PollingLinkQueue::serialize_order(SST::Core::Serialization::serializer& ser)
 }
 
 } // namespace SST
-
