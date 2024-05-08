@@ -48,7 +48,7 @@ private:
     void serialize_order(SST::Core::Serialization::serializer& ser) override
     {
         Event::serialize_order(ser);
-        ser& counter;
+        SST_SER(counter)
     }
 
     ImplementSerializable(SST::CoreTestCheckpoint::coreTestCheckpointEvent);

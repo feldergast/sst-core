@@ -118,7 +118,7 @@ public:
     void serialize_order(SST::Core::Serialization::serializer& ser) override
     {
         SST::Component::serialize_order(ser);
-        ser& subComps;
+        SST_SER(subComps)
     }
     ImplementSerializable(SST::CoreTestSubComponent::SubComponentLoader)
 
@@ -158,7 +158,7 @@ public:
     void serialize_order(SST::Core::Serialization::serializer& ser) override
     {
         SubCompSlotInterface::serialize_order(ser);
-        ser& subComps;
+        SST_SER(subComps)
     }
     ImplementSerializable(SST::CoreTestSubComponent::SubCompSlot)
 
@@ -255,11 +255,11 @@ public:
     void serialize_order(SST::Core::Serialization::serializer& ser) override
     {
         SubCompSendRecvInterface::serialize_order(ser);
-        ser& link;
-        ser& nToSend;
-        ser& nMsgSent;
-        ser& totalMsgSent;
-        ser& out;
+        SST_SER(link)
+        SST_SER(nToSend)
+        SST_SER(nMsgSent)
+        SST_SER(totalMsgSent)
+        SST_SER(out)
     }
     ImplementSerializable(SST::CoreTestSubComponent::SubCompSender)
 
@@ -313,9 +313,9 @@ public:
     void serialize_order(SST::Core::Serialization::serializer& ser) override
     {
         SubCompSendRecvInterface::serialize_order(ser);
-        ser& link;
-        ser& nMsgReceived;
-        ser& out;
+        SST_SER(link)
+        SST_SER(nMsgReceived)
+        SST_SER(out);
     }
     ImplementSerializable(SST::CoreTestSubComponent::SubCompReceiver)
 

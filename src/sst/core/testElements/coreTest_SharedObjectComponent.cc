@@ -345,24 +345,25 @@ void
 coreTestSharedObjectsComponent::serialize_order(SST::Core::Serialization::serializer& ser)
 {
     Component::serialize_order(ser);
-    ser& out;
-    ser& test_array;
-    ser& test_bool_array;
-    ser& test_map;
-    ser& test_set;
-    ser& myid;
-    ser& num_entities;
-    ser& count;
-    ser& check;
-    ser& late_write;
-    ser& pub;
-    ser& late_initialize;
-    ser& checkpoint;
+    SST_SER(out)
+    SST_SER(test_array)
+    SST_SER(test_array)
+    SST_SER(test_bool_array)
+    SST_SER(test_map)
+    SST_SER(test_set)
+    SST_SER(myid)
+    SST_SER(num_entities)
+    SST_SER(count)
+    SST_SER(check)
+    SST_SER(late_write)
+    SST_SER(pub)
+    SST_SER(late_initialize)
+    SST_SER(checkpoint)
 
-    if ( test_array ) ser& array;
-    if ( test_bool_array ) ser& bool_array;
-    if ( test_map ) ser& map;
-    if ( test_set ) ser& set;
+    if ( test_array ) SST_SER(test_array)
+    if ( test_bool_array ) SST_SER(bool_array)
+    if ( test_map ) SST_SER(map)
+    if ( test_set ) SST_SER(set)
 }
 
 } // namespace CoreTestSharedObjectsComponent

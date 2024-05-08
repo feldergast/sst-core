@@ -160,24 +160,26 @@ void
 coreTestCheckpoint::serialize_order(SST::Core::Serialization::serializer& ser)
 {
     SST::Component::serialize_order(ser);
-    ser& link;
-    ser& self_link;
-    ser& clock_handler;
-    ser& clock_tc;
-    ser& duty_cycle;
-    ser& duty_cycle_count;
-    ser& counter;
-    ser& test_string;
-    ser& output;
-    ser& mersenne;
-    ser& marsaglia;
-    ser& xorshift;
-    ser& dist_const;
-    ser& dist_discrete;
-    ser& dist_expon;
-    ser& dist_gauss;
-    ser& dist_poisson;
-    ser& dist_uniform;
+    SST_SER(link)
+    SST_SER(self_link)
+    SST_SER(clock_handler)
+    SST_SER(clock_tc)
+    SST_SER(duty_cycle)
+    SST_SER(duty_cycle_count)
+    SST_SER(counter)
+    SST_SER(test_string); // Make sure semicolon is a no-op
+    SST_SER(counter);
+    SST_SER(test_string);
+    SST_SER(output);
+    SST_SER(mersenne)
+    SST_SER(marsaglia)
+    SST_SER(xorshift)
+    SST_SER(dist_const)
+    SST_SER(dist_discrete)
+    SST_SER(dist_expon)
+    SST_SER(dist_gauss)
+    SST_SER(dist_poisson)
+    SST_SER(dist_uniform)
 }
 
 

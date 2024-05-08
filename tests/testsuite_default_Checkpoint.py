@@ -168,7 +168,7 @@ class testcase_Checkpoint(SSTTestCase):
         self.run_sst(sdlfile_generate, outfile_generate, other_args=options_checkpoint)
 
         # Run from restart
-        sdlfile_restart = "{0}/{1}_{2}.sst_cpt".format(outdir,testtype,cptrestart)
+        sdlfile_restart = "{0}/{1}_{2}.sstcpt".format(outdir,testtype,cptrestart)
         outfile_restart = "{0}/test_Checkpoint_{1}_restart.out".format(outdir, testtype)
         options_restart = "--load-checkpoint"
         self.run_sst(sdlfile_restart, outfile_restart, other_args=options_restart)

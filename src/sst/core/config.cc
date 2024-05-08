@@ -619,7 +619,7 @@ Config::Config(uint32_t num_ranks, bool first_rank) : ConfigShared(!first_rank, 
     // Advanced Options - Checkpointing
     checkpoint_period_    = "";
     load_from_checkpoint_ = false;
-    checkpoint_prefix_    = "";
+    checkpoint_prefix_    = "checkpoint";
 
     // Advanced Options - environment
     enable_sig_handling_ = true;

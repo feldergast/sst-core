@@ -263,6 +263,10 @@ const uint32_t serializable_builder_impl<T>::cls_id_ =
 
 #define DeclareSerializable(obj)
 
+// Serialization macros for checkpoint/debug serialization
+#define SST_SER(obj) ser& obj;
+#define SST_SER_AS_PTR(obj) ser| obj;
+
 #include "sst/core/serialization/serialize_serializable.h"
 
 #endif
