@@ -182,14 +182,32 @@ ComponentInfo::~ComponentInfo()
 }
 
 void
+ComponentInfo::serialize_comp(SST::Core::Serialization::serializer& ser)
+{
+    ser& component;
+    ser& link_map;
+    for ( auto it = subComponents.begin(); it != subComponents.end(); ++it ) {
+        it->second.serialize_comp(ser);
+    }
+}
+
+void
 ComponentInfo::serialize_order(SST::Core::Serialization::serializer& ser)
 {
+    // The ComponentInfo for the Component will make sure all of the
+    // hierarchy of ComponentInfos are serialized before serializing
+    // any components, which includes serializing links because they
+    // have handlers which have pointers to components.  This is done
+    // to ensure that the ComponentInfo objects in the subComponents
+    // map serialize first.  If they don't, then we may end up with a
+    // corrupted subComponents map when we restart.
+
+    // Serialize all my data except the component and link_map
+
     ser& const_cast<ComponentId_t&>(id);
     ser& parent_info;
     ser& const_cast<std::string&>(name);
     ser& const_cast<std::string&>(type);
-    ser& component;
-    ser& link_map;
 
     // Not used after construction, no need to serialize
     // ser& params;
@@ -250,6 +268,11 @@ ComponentInfo::serialize_order(SST::Core::Serialization::serializer& ser)
         break;
     }
     }
+
+    // Only the parent Component will call serialize_comp directly.
+    // This function will walk the hierarchy and call it on all of its
+    // subcomponent children.
+    if ( parent_info == nullptr ) { serialize_comp(ser); }
 }
 
 

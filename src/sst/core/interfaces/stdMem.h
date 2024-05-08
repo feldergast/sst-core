@@ -1210,12 +1210,8 @@ public:
 
     /**
      * Serialization function
-    */
-   virtual void serialize_order(SST::Core::Serialization::serializer& ser)
-   {
-        SST::SubComponent::serialize_order(ser);
-   }
-
+     */
+    virtual void serialize_order(SST::Core::Serialization::serializer& ser) { SST::SubComponent::serialize_order(ser); }
 };
 
 } // namespace Interfaces

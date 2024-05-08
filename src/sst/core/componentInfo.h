@@ -171,6 +171,7 @@ public:
        Function used to serialize the class
      */
     void serialize_order(SST::Core::Serialization::serializer& ser);
+    void serialize_comp(SST::Core::Serialization::serializer& ser);
 
     /* Old ELI Style subcomponent constructor */
     ComponentInfo(const std::string& type, const Params* params, const ComponentInfo* parent_info);
