@@ -1272,8 +1272,7 @@ Simulation_impl::intializeProfileTools(const std::string& config)
 void
 Simulation_impl::checkpoint()
 {
-    std::string checkpoint_filename =
-        std::to_string(currentSimCycle) + "_" + std::to_string(checkpoint_id) + ".sstcpt";
+    std::string checkpoint_filename = std::to_string(currentSimCycle) + "_" + std::to_string(checkpoint_id) + ".sstcpt";
     if ( checkpointPrefix != "" ) checkpoint_filename = checkpointPrefix + "_" + checkpoint_filename;
     checkpoint_id++;
 

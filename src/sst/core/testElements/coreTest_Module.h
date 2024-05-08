@@ -93,8 +93,8 @@ public:
 
     coreTestModuleLoader(SST::ComponentId_t id, SST::Params& params);
     ~coreTestModuleLoader();
-    void setup();
-    void finish();
+    void setup() override;
+    void finish() override;
     void serialize_order(SST::Core::Serialization::serializer& ser) override;
     ImplementSerializable(SST::CoreTestModule::coreTestModuleLoader)
 

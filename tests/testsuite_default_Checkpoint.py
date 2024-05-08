@@ -122,22 +122,22 @@ class testcase_Checkpoint(SSTTestCase):
     @unittest.skipIf(testing_check_get_num_ranks() > 1, parallelerr)
     @unittest.skipIf(testing_check_get_num_threads() > 1, parallelerr)
     def test_Checkpoint_SharedObject_array(self):
-        self.checkpoint_test_template("SharedObject", "6ns", "6000_0", modelparams="--param=object_type:array --param=num_entities:12 --param=full_initialization:true --param=checkpoint:true")
+        self.checkpoint_test_template("SharedObject", "6ns", "6000_0", modelparams="--param=object_type:array --param=num_entities:12 --param=full_initialization:true --param=checkpoint:true", outstr = "SharedObject_array")
    
     @unittest.skipIf(testing_check_get_num_ranks() > 1, parallelerr)
     @unittest.skipIf(testing_check_get_num_threads() > 1, parallelerr)
     def test_Checkpoint_SharedObject_bool_array(self):
-        self.checkpoint_test_template("SharedObject", "6ns", "6000_0", modelparams="--param=object_type:bool_array --param=num_entities:12 --param=full_initialization:true --param=checkpoint:true")
+        self.checkpoint_test_template("SharedObject", "6ns", "6000_0", modelparams="--param=object_type:bool_array --param=num_entities:12 --param=full_initialization:true --param=checkpoint:true", outstr = "SharedObject_bool_array")
 
     @unittest.skipIf(testing_check_get_num_ranks() > 1, parallelerr)
     @unittest.skipIf(testing_check_get_num_threads() > 1, parallelerr)
     def test_Checkpoint_SharedObject_map(self):
-        self.checkpoint_test_template("SharedObject", "6ns", "6000_0", modelparams="--param=object_type:map --param=num_entities:12 --param=full_initialization:true --param=checkpoint:true")
+        self.checkpoint_test_template("SharedObject", "6ns", "6000_0", modelparams="--param=object_type:map --param=num_entities:12 --param=full_initialization:true --param=checkpoint:true", outstr = "SharedObject_map")
 
     @unittest.skipIf(testing_check_get_num_ranks() > 1, parallelerr)
     @unittest.skipIf(testing_check_get_num_threads() > 1, parallelerr)
     def test_Checkpoint_SharedObject_set(self):
-        self.checkpoint_test_template("SharedObject", "6ns", "6000_0", modelparams="--param=object_type:set --param=num_entities:12 --param=full_initialization:true --param=checkpoint:true")
+        self.checkpoint_test_template("SharedObject", "6ns", "6000_0", modelparams="--param=object_type:set --param=num_entities:12 --param=full_initialization:true --param=checkpoint:true", outstr = "SharedObject_set")
 
     @unittest.skipIf(testing_check_get_num_ranks() > 1, parallelerr)
     @unittest.skipIf(testing_check_get_num_threads() > 1, parallelerr)
@@ -148,7 +148,7 @@ class testcase_Checkpoint(SSTTestCase):
     # testtype: which test to run
     # cptfreq: Checkpoint frequency
     # cpttime: Which checkpoint to use for restart
-    def checkpoint_test_template(self, testtype, cptfreq, cptrestart, subcomp=False, modelparams=""):
+    def checkpoint_test_template(self, testtype, cptfreq, cptrestart, subcomp=False, modelparams="", outstr=""):
 
         # Different kind of test
         # Run specified test file (will generate a checkpoint)
@@ -157,19 +157,24 @@ class testcase_Checkpoint(SSTTestCase):
 
         testsuitedir = self.get_testsuite_dir()
         outdir = test_output_get_run_dir()
+        
+        if outstr != "":
+            teststr = outstr
+        else:
+            teststr = testtype
 
         # Generate checkpoint
         if ( subcomp ):
             sdlfile_generate = "{0}/subcomponent_tests/test_{1}.py".format(testsuitedir, testtype)
         else:
             sdlfile_generate = "{0}/test_{1}.py".format(testsuitedir,testtype)
-        outfile_generate = "{0}/test_Checkpoint_{1}_generate.out".format(outdir, testtype)
-        options_checkpoint="--checkpoint-period={0} --checkpoint-prefix={1} --model-options='{2}'".format(cptfreq,testtype,modelparams)
+        outfile_generate = "{0}/test_Checkpoint_{1}_generate.out".format(outdir, outstr)
+        options_checkpoint="--checkpoint-period={0} --checkpoint-prefix={1} --model-options='{2}'".format(cptfreq,teststr,modelparams)
         self.run_sst(sdlfile_generate, outfile_generate, other_args=options_checkpoint)
 
         # Run from restart
-        sdlfile_restart = "{0}/{1}_{2}.sstcpt".format(outdir,testtype,cptrestart)
-        outfile_restart = "{0}/test_Checkpoint_{1}_restart.out".format(outdir, testtype)
+        sdlfile_restart = "{0}/{1}_{2}.sstcpt".format(outdir,teststr,cptrestart)
+        outfile_restart = "{0}/test_Checkpoint_{1}_restart.out".format(outdir, teststr)
         options_restart = "--load-checkpoint"
         self.run_sst(sdlfile_restart, outfile_restart, other_args=options_restart)
 

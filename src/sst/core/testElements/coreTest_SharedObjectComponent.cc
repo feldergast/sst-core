@@ -360,7 +360,7 @@ coreTestSharedObjectsComponent::serialize_order(SST::Core::Serialization::serial
     SST_SER(late_initialize)
     SST_SER(checkpoint)
 
-    if ( test_array ) SST_SER(test_array)
+    if ( test_array ) SST_SER(array)
     if ( test_bool_array ) SST_SER(bool_array)
     if ( test_map ) SST_SER(map)
     if ( test_set ) SST_SER(set)

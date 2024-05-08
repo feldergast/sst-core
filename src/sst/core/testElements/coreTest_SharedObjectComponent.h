@@ -43,8 +43,8 @@ struct setItem : public SST::Core::Serialization::serializable
 
     void serialize_order(SST::Core::Serialization::serializer& ser) override
     {
-        SST_SER(key)
-        SST_SER(value)
+        SST_SER(key);
+        SST_SER(value);
     }
 
     ImplementSerializable(SST::CoreTestSharedObjectsComponent::setItem);
