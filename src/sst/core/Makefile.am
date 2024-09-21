@@ -94,6 +94,7 @@ nobase_dist_sst_HEADERS = \
 	serialization/serializable_base.h \
 	serialization/serialize.h \
 	serialization/serialize_impl_fwd.h \
+	serialization/objectMap.h \
 	serialization/impl/serialize_array.h \
 	serialization/impl/serialize_atomic.h \
 	serialization/impl/ser_buffer_accessor.h \
@@ -101,6 +102,7 @@ nobase_dist_sst_HEADERS = \
 	serialization/impl/serialize_list.h \
 	serialization/impl/serialize_map.h \
 	serialization/impl/serialize_multiset.h \
+	serialization/impl/mapper.h \
 	serialization/impl/packer.h \
 	serialization/impl/serialize_priority_queue.h \
 	serialization/impl/serialize_set.h \
@@ -213,6 +215,7 @@ sst_core_sources = \
 	ssthandler.cc \
 	sstpart.cc \
 	timeVortex.cc \
+	serialization/objectMap.cc \
 	serialization/serializable_base.cc \
 	serialization/serializable.cc \
 	serialization/serializer.cc \

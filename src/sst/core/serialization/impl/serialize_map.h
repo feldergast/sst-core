@@ -20,11 +20,21 @@
 #include "sst/core/serialization/serializer.h"
 
 #include <map>
+#include <string>
 #include <unordered_map>
 
 namespace SST {
 namespace Core {
 namespace Serialization {
+
+/**
+   Class used to map std::map
+ */
+// template<class Key, class Value>
+// class ObjectMapMap : public ObjectMapWithChildren
+// {
+    
+// };
 
 template <class Key, class Value>
 class serialize<std::map<Key, Value>>
@@ -73,6 +83,9 @@ public:
             }
             break;
         }
+        case serializer::MAP:
+            // Add your code here
+            break;
         }
     }
 };
@@ -124,6 +137,9 @@ public:
             }
             break;
         }
+        case serializer::MAP:
+            // Add your code here
+            break;
         }
     }
 };

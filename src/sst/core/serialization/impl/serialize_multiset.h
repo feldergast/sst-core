@@ -69,6 +69,9 @@ public:
             }
             break;
         }
+        case serializer::MAP:
+            // Add your code here
+            break;
         }
     }
 };
@@ -116,6 +119,9 @@ public:
             }
             break;
         }
+        case serializer::MAP:
+            // Add your code here
+            break;
         }
     }
 };

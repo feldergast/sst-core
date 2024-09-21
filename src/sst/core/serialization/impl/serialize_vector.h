@@ -19,18 +19,67 @@
 
 #include "sst/core/serialization/serializer.h"
 
+#include <string>
 #include <vector>
 
 namespace SST {
 namespace Core {
 namespace Serialization {
 
-template <class T>
-class serialize<std::vector<T>>
+
+/**
+   Class used to map std::vectors.
+ */
+template<class T>
+class ObjectMapVector : public ObjectMapWithChildren
 {
-    typedef std::vector<T> Vector;
+protected:
+
+    std::vector<T>* addr_;
 
 public:
+    // virtual std::string get(const std::string& var) override
+    // {
+    //     if constexpr ( std::is_fundamental_v<T> || std::is_base_of_v<T, std::string> ) {
+    //         int index = SST::Core::from_string<int>(var);
+    //         return std::to_string(vector()->at(index));
+    //     }
+    //     return "";
+    // }
+
+    // virtual void set(const std::string& var, const std::string& value) override
+    // {
+    //     if constexpr ( std::is_fundamental_v<T> ) {
+    //         int index = SST::Core::from_string<int>(var);
+    //         vector()->at(index) = SST::Core::from_string<T>(value);
+    //     }
+    //     else if constexpr ( std::is_base_of_v<T, std::string> ) {
+    //         int index = SST::Core::from_string<int>(var);
+    //         vector()->at(index) = value;
+    //     }
+    // }
+
+    bool isContainer() override { return true; }
+
+    std::string getType() override { return demangle_name(typeid(std::vector<T>).name()); }
+
+    void* getAddr() override { return addr_; }
+    
+    ObjectMapVector(std::vector<T>* addr) :
+        ObjectMapWithChildren(),
+        addr_(addr)
+    {}
+};
+
+
+template <class T>
+class serialize_impl<std::vector<T>>
+{
+    template <class A>
+    friend class serialize;
+
+    typedef std::vector<T> Vector;
+    
     void operator()(Vector& v, serializer& ser)
     {
         switch ( ser.mode() ) {
@@ -53,20 +102,39 @@ public:
             v.resize(s);
             break;
         }
+        case serializer::MAP:
+            // If this version of operator() is called during mapping
+            // mode, then the variable being mapped did not provide a
+            // name, which means no ObjectMap will be created.
+            break;
         }
 
         for ( size_t i = 0; i < v.size(); ++i ) {
             ser& v[i];
         }
     }
+
+    void operator()(Vector& v, serializer& ser, const char* name)
+    {
+        if ( ser.mode() != serializer::MAP ) return operator()(v,ser);
+
+        ObjectMapVector<T>* obj_map = new ObjectMapVector<T>(&v);
+        ser.mapper().map_hierarchy_start(name, obj_map);
+        for ( size_t i = 0; i < v.size(); ++i ) {
+            sst_map_object(ser, v[i], std::to_string(i).c_str());
+        }
+        ser.mapper().map_hierarchy_end();
+    }
 };
 
 template <>
-class serialize<std::vector<bool>>
+class serialize_impl<std::vector<bool>>
 {
+    template <class A>
+    friend class serialize;
+
     typedef std::vector<bool> Vector;
 
-public:
     void operator()(Vector& v, serializer& ser)
     {
         switch ( ser.mode() ) {
@@ -103,8 +171,30 @@ public:
             }
             break;
         }
+        case serializer::MAP:
+            // If this version of operator() is called during mapping
+            // mode, then the variable being mapped did not provide a
+            // name, which means no ObjectMap will be created.
+            break;
         }
     }
+
+    // TODO: Add support for mapping vector<bool>.  The weird way they
+    // pack the bits means we'll likely need to have a special case of
+    // ObjectMapVector<bool> that knows how to handle the packing.
+    
+    // void operator()(Vector& v, serializer& ser, const char* name)
+    // {
+    //     if ( ser.mode() != serializer::MAP ) return operator()(v,ser);
+
+    //     ObjectMapVector<bool>* obj_map = new ObjectMapVector<bool>(&v);
+    //     ser.mapper().map_hierarchy_start(name, obj_map);
+    //     for ( size_t i = 0; i < v.size(); ++i ) {
+    //         sst_map_object(ser, v[i], std::to_string(i).c_str());
+    //     }
+    //     ser.mapper().map_hierarchy_end();
+    // }
+
 };
 
 

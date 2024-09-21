@@ -1308,6 +1308,22 @@ Simulation_impl::intializeProfileTools(const std::string& config)
 #endif
 }
 
+SST::Core::Serialization::ObjectMap*
+Simulation_impl::getComponentObjectMap()
+{
+    SST::Core::Serialization::serializer ser;
+    SST::Core::Serialization::ObjectMapClass* obj_map = new SST::Core::Serialization::ObjectMapClass();
+    ser.enable_pointer_tracking();
+    ser.start_mapping(obj_map);
+    for ( auto comp = compInfoMap.begin(); comp != compInfoMap.end(); comp++ ) {
+        ComponentInfo* compinfo = *comp;
+        // ser&           compinfo->component;
+        sst_map_object(ser, compinfo->component, compinfo->getName().c_str());
+    }
+    return obj_map;
+}
+
+
 void
 Simulation_impl::scheduleCheckpoint()
 {

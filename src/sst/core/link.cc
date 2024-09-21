@@ -114,8 +114,9 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
                 // If I'm a polling link, I need to serialize my
                 // pair's send_queue.  For HANDLER and SYNC links, the
                 // send_queue will be reinitialized after restart
-                PollingLinkQueue* queue = dynamic_cast<PollingLinkQueue*>(s->pair_link->send_queue);
-                ser&              queue;
+                // TODO: Fix PollingLinkQueue serialization
+                // PollingLinkQueue* queue = dynamic_cast<PollingLinkQueue*>(s->pair_link->send_queue);
+                // ser&              queue;
             }
 
             // My delivery_info is stored in my pair_link.
@@ -232,9 +233,10 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
                 // pair's send_queue. For now, I will store it in my
                 // own send_queue variable and swap once we have both
                 // links.
-                PollingLinkQueue* queue;
-                ser&              queue;
-                s->send_queue = queue;
+                // TODO - Fix PollingLinkQueue serialization
+                // PollingLinkQueue* queue;
+                // ser&              queue;
+                // s->send_queue = queue;
             }
             else {
                 s->send_queue = Simulation_impl::getSimulation()->getTimeVortex();
@@ -276,9 +278,17 @@ SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core:
             // ser & s->profile_tools;
         }
         break;
+    case serializer::MAP:
+        // Add your code here
+        break;
     }
 }
 
+void
+SST::Core::Serialization::serialize_impl<Link*>::operator()(Link*& s, SST::Core::Serialization::serializer& ser, const char* name)
+{
+    // TODO: Implement Link mapping mode
+}
 
 /**
  * Null Event.  Used when nullptr is passed into any of the send

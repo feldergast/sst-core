@@ -54,6 +54,9 @@ public:
             v.store(val);
             break;
         }
+        case serializer::MAP:
+            // Add your code here
+            break;
         }
     }
 };

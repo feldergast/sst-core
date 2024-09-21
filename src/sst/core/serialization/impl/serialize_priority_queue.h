@@ -79,6 +79,9 @@ public:
             }
             break;
         }
+        case serializer::MAP:
+            // Add your code here
+            break;
         }
     }
 };

@@ -28,6 +28,7 @@
 #include "sst/core/timeLord.h"
 #include "sst/core/unitAlgebra.h"
 #include "sst/core/warnmacros.h"
+#include "sst/core/serialization/serialize.h"
 
 #include <string>
 
@@ -853,6 +854,9 @@ BaseComponent::serialize_order(SST::Core::Serialization::serializer& ser)
         }
         break;
     }
+    case SST::Core::Serialization::serializer::MAP:
+        // Add your code here
+        break;
     }
 }
 
@@ -863,7 +867,7 @@ namespace pvt {
 static const long null_ptr_id = -1;
 
 void
-size_basecomponent(serializable_base* s, serializer& ser)
+SerializeBaseComponentHelper::size_basecomponent(serializable_base* s, serializer& ser)
 {
     long dummy = 0;
     ser.size(dummy);
@@ -871,7 +875,7 @@ size_basecomponent(serializable_base* s, serializer& ser)
 }
 
 void
-pack_basecomponent(serializable_base* s, serializer& ser)
+SerializeBaseComponentHelper::pack_basecomponent(serializable_base* s, serializer& ser)
 {
     if ( s ) {
         long cls_id = s->cls_id();
@@ -885,7 +889,7 @@ pack_basecomponent(serializable_base* s, serializer& ser)
 }
 
 void
-unpack_basecomponent(serializable_base*& s, serializer& ser)
+SerializeBaseComponentHelper::unpack_basecomponent(serializable_base*& s, serializer& ser)
 {
     long cls_id;
     ser.unpack(cls_id);
@@ -895,6 +899,36 @@ unpack_basecomponent(serializable_base*& s, serializer& ser)
         ser.report_new_pointer(reinterpret_cast<uintptr_t>(s));
         s->serialize_order(ser);
     }
+}
+
+void
+SerializeBaseComponentHelper::map_basecomponent(serializable_base*& s, serializer& ser, const char* name)
+{
+    if ( s ) {
+        BaseComponent* comp = static_cast<BaseComponent*>(s);
+        ObjectMapClass* obj_map = new ObjectMapClass(s, s->cls_name());
+        ser.report_object_map(obj_map);
+        ser.mapper().map_hierarchy_start(name, obj_map);
+
+        // Put in any subcomponents first
+        for ( auto it = comp->my_info->subComponents.begin(); it != comp->my_info->subComponents.end(); ++it ) {
+            sst_map_object(ser, it->second.component, it->second.getShortName().c_str());
+            it->second.serialize_comp(ser);
+        }
+
+        // Put in ComponentInfo data
+        ObjectMap* my_info_dir = new ObjectMapHierarchyOnly();
+        ser.mapper().map_hierarchy_start("my_info", my_info_dir);
+        ser.mapper().setNextObjectReadOnly();
+        sst_map_object(ser, const_cast<ComponentId_t&>(comp->my_info->id), "id");
+        ser.mapper().setNextObjectReadOnly();
+        sst_map_object(ser, const_cast<std::string&>(comp->my_info->type), "type");
+        sst_map_object(ser, comp->my_info->defaultTimeBase, "defaultTimeBase");
+        ser.mapper().map_hierarchy_end();  // for my_info_dir
+
+        s->serialize_order(ser);
+        ser.mapper().map_hierarchy_end();  // obj_map
+    }    
 }
 
 } // namespace pvt

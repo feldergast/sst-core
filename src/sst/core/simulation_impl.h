@@ -64,6 +64,10 @@ class StatisticOutput;
 class StatisticProcessingEngine;
 } // namespace Statistics
 
+namespace Serialization {
+class ObjectMap;
+} // namespace Serialization
+
 /**
  * Main control class for a SST Simulation.
  * Provides base features for managing the simulation
@@ -72,6 +76,8 @@ class Simulation_impl
 {
 
 public:
+    SST::Core::Serialization::ObjectMap* getComponentObjectMap();
+
     /********  Public API inherited from Simulation ********/
     /** Get the run mode of the simulation (e.g. init, run, both etc) */
     SimulationRunMode getSimulationMode() const { return runMode; };

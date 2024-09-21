@@ -71,6 +71,250 @@ using namespace SST::Partition;
 using namespace std;
 using namespace SST;
 
+// Object to walk the ObjectMap hierarchy
+#include "sst/core/from_string.h"
+
+class ObjectExplorer
+{
+    SST::Core::Serialization::ObjectMap* obj_;
+    bool done = false;
+
+    std::vector<std::string> tokenize(std::vector<std::string>& tokens, const std::string& input)
+    {
+        std::istringstream iss(input);
+        std::string token;
+
+        while (iss >> token) {
+            tokens.push_back(token);
+        }
+
+        return tokens;
+    }
+
+    void pwd(std::vector<std::string>& UNUSED(tokens)) {
+        // std::string path = obj_->getName();
+        // std::string slash("/");
+        // // path = slash + path;
+        // SST::Core::Serialization::ObjectMap* curr = obj_->getParent();
+        // while ( curr != nullptr ) {
+        //     path = curr->getName() + slash + path;
+        //     curr = curr->getParent();
+        // }
+
+        printf("%s (%s)\n",obj_->getFullName().c_str(), obj_->getType().c_str());
+    }
+
+    void ls(std::vector<std::string>& UNUSED(tokens)) {
+        // if ( obj_->isContainer() ) {
+        //     printf("Object is vector of size: %zu\n", obj_->num_vars());
+        //     return;
+        // }
+        
+        std::vector<std::pair<std::string,SST::Core::Serialization::ObjectMap*>> vars = obj_->getVariables();
+        for ( auto& x : vars ) {
+            if ( x.second->isFundamental() ) {
+                printf("%s = %s (%s)\n", x.first.c_str(), x.second->get().c_str(), x.second->getType().c_str());
+            }
+            else {
+                printf("%s/ (%s)\n", x.first.c_str(), x.second->getType().c_str());
+            }
+        }
+    }
+    
+    void cd(std::vector<std::string>& tokens) {
+        if ( tokens.size() != 2 ) {
+            printf("Invalid format for cd command (cd <obj>)\n");
+            return;
+        }
+
+        // Check for ..
+        if ( tokens[1] == ".." ) {
+            auto* parent = obj_->selectParent();
+            if ( parent == nullptr ) {
+                printf("Already at top of object hierarchy\n");
+                return;
+            }
+            obj_ = parent;
+            return;
+        }
+
+        fflush(stdout);
+        SST::Core::Serialization::ObjectMap* new_obj = obj_->selectVariable(tokens[1]);
+        fflush(stdout);
+        
+        if ( !new_obj ) {
+            printf("Unknown object in cd command: %s\n", tokens[1].c_str());
+            return;
+        }
+
+        if ( new_obj->isFundamental() ) {
+            printf("Object %s is a fundamental type so you cannot cd into it\n", tokens[1].c_str());
+            new_obj->selectParent();
+            return;
+        }
+
+        obj_ = new_obj;
+    }
+
+    void print(std::vector<std::string>& tokens) {
+        // Index in tokens array where we may find the variable name
+        size_t var_index = 1;
+
+        // See if have a -r or not
+        int recurse = 0;
+        std::string tok = tokens[1];
+        if (tok.size() >= 2 && tok[0] == '-' && tok[1] == 'r') {
+            // Got a -r
+            std::string num = tok.substr(2);
+            if ( num.size() != 0 ) {
+                try {
+                    recurse = from_string<int>(num);
+                }
+                catch ( std::invalid_argument& e ) {
+                    printf("Invalid number format specified with -r: %s\n", tok.c_str());
+                    return;
+                }
+            }
+            else {
+                recurse = 4; // default -r depth
+            }
+            
+            var_index = 2;
+        }
+        
+        if ( tokens.size() == var_index ) {
+            // Print current object
+            obj_->print(recurse);
+            return;
+        }
+        
+        if ( tokens.size() != (var_index + 1) ) {
+            printf("Invalid format for print command (print [-rN] [<obj>])\n");
+            return;
+        }
+
+        bool found = obj_->printVariable(tokens[var_index], recurse);
+        if ( !found ) {
+            printf("Unknown object in print command: %s\n", tokens[1].c_str());
+            return;
+        }
+        
+        // // if ( obj_->isContainer() ) {
+        // //     printf("%s\n", obj_->get(tokens[1]).c_str());
+        // //     return;
+        // // }
+        
+        // auto* var = obj_->selectVariable(tokens[1]);
+        // if ( !var ) {
+        //     printf("Unknown object in print command: %s\n", tokens[1].c_str());
+        //     return;
+        // }
+
+        // if ( !var->isFundamental() ) {
+        //     var->print();
+        //     // printf("Invalid object in print command: %s is not a fundamental type\n", tokens[1].c_str());
+        //     var->selectParent();
+        //     return;
+        // }
+        // printf("%s\n", var->get().c_str());
+        // var->selectParent();
+    }
+
+
+    void set(std::vector<std::string>& tokens) {
+        if ( tokens.size() != 3 ) {
+            printf("Invalid format for set command (set <obj> <value>)\n");
+            return;
+        }
+
+        if ( obj_->isContainer() ) {
+            bool found = false;
+            bool read_only = false;
+            obj_->set(tokens[1], tokens[2], found, read_only);
+            if ( !found ) printf("Unknown object in set command: %s\n", tokens[1].c_str());
+            if ( read_only ) printf("Object specified in set command is read-only: %s\n", tokens[1].c_str());
+            return;
+        }
+        
+        auto* var = obj_->selectVariable(tokens[1]);
+        if ( !var ) {
+            printf("Unknown object in set command: %s\n", tokens[1].c_str());
+            return;
+        }
+
+        if ( var->isReadOnly() ) {
+            printf("Object specified in set command is read-only: %s\n", tokens[1].c_str());
+            var->selectParent();
+            return;
+        }
+
+        if ( !var->isFundamental() ) {
+            printf("Invalid object in set command: %s is not a fundamental type\n", tokens[1].c_str());
+            var->selectParent();
+            return;
+        }
+
+        try {
+            var->set(tokens[2]);
+        }
+        catch (exception& e) {
+            printf("Invalid format: %s\n", tokens[2].c_str());
+        }
+        var->selectParent();
+    }
+
+    
+    void dispatch_cmd(std::string cmd)
+    {
+        std::vector<std::string> tokens;
+        tokenize(tokens, cmd);
+
+        if ( tokens[0] == "exit" || tokens[0] == "quit" ) {
+            printf("Exiting ObjectExplorer\n");
+            done = true;
+        }
+        else if ( tokens[0] == "pwd" ) {
+            pwd(tokens);
+        }
+        else if ( tokens[0] == "ls" ) {
+            ls(tokens);
+        }
+        else if ( tokens[0] == "cd" ) {
+            cd(tokens);
+        }
+        else if ( tokens[0] == "print" ) {
+            print(tokens);
+        }
+        else if ( tokens[0] == "set" ) {
+            set(tokens);
+        }
+        else {
+            printf("Unknown command: %s\n", tokens[0].c_str());
+        }
+    }
+    
+public:
+    ObjectExplorer(SST::Core::Serialization::ObjectMap* obj) :
+        obj_(obj)
+    {
+    }
+
+    void explore()
+    {
+        printf("Exploring object: %s\n", obj_->getName().c_str());
+        done = false;
+
+        std::string line;
+        while ( !done ) {
+            printf("> ");
+            std::getline(std::cin,line);
+            dispatch_cmd(line);
+        }
+    }
+};
+
+
+
 static SST::Output g_output;
 
 
@@ -577,6 +821,12 @@ start_simulation(uint32_t tid, SimThreadInfo_t& info, Core::ThreadSafe::Barrier&
         info.build_time = start_run - start_build;
     }
 
+    // DEMO: Before run, get the object map and run the object explorer
+    SST::Core::Serialization::ObjectMap* obj_map = sim->getComponentObjectMap();
+    ObjectExplorer* ex = new ObjectExplorer(obj_map);
+    ex->explore();
+    
+    
     /* Run Simulation */
     if ( info.config->runMode() == SimulationRunMode::RUN || info.config->runMode() == SimulationRunMode::BOTH ) {
         sim->run();
@@ -656,9 +906,221 @@ start_simulation(uint32_t tid, SimThreadInfo_t& info, Core::ThreadSafe::Barrier&
     delete sim;
 }
 
+/////////////////////
+#include "sst/core/serialization/serializable.h"
+
+class MapSerTestBase : public SST::Core::Serialization::serializable
+{
+public:
+    MapSerTestBase() :
+        SST::Core::Serialization::serializable()
+    {}
+
+    virtual void print() = 0;
+
+    void serialize_order(SST::Core::Serialization::serializer& UNUSED(ser)) override {}
+
+    ImplementVirtualSerializable(MapSerTestBase)
+    
+};
+
+class MapSerTest : public MapSerTestBase
+{
+public:
+    uint16_t ser1 = 0;
+    std::string ser2 = "";
+
+    MapSerTest() :
+        MapSerTestBase()
+    {}
+        
+    MapSerTest(uint16_t ser1, const std::string& ser2):
+        MapSerTestBase(),
+        ser1(ser1),
+        ser2(ser2)
+    {
+    }
+
+    void print() override
+    {
+        printf("  ser1 = %" PRIu16 "\n", ser1);
+        printf("  ser2 = %s\n", ser2.c_str());
+    }
+
+    void serialize_order(SST::Core::Serialization::serializer& ser) override
+    {
+        MapSerTestBase::serialize_order(ser);
+        SST_SER(ser1);
+        SST_SER(ser2);
+    }
+
+    ImplementSerializable(MapSerTest)
+};
+
+class MapTest;
+
+class MapSubTest {
+public:
+    int sub1 = 0;
+    char sub2 = '0';
+    std::string sub3;
+    float sub4;
+    MapSerTestBase* sub5 = nullptr;
+    MapTest* parent = nullptr;
+
+    MapSubTest()
+    {
+        sub5 = new MapSerTest(79, "serializable");
+    }
+    
+    void serialize_order(SST::Core::Serialization::serializer& ser)
+    {
+        SST_SER(sub1);
+        SST_SER(sub2);
+        SST_SER(sub3);
+        ser & sub4;
+        SST_SER(sub5);
+        SST_SER(parent);
+        // ser & sub5;
+    }
+
+    void print()
+    {
+        printf(" sub1 = %d\n", sub1);
+        printf(" sub2 = %c\n", sub2);
+        printf(" sub3 = %s\n", sub3.c_str());
+        printf(" sub4 = %f\n", sub4);
+        printf(" sub5:\n");
+        sub5->print();
+        
+    }
+};
+
+class MapTest {
+public:
+    SimTime_t var1 = 0;
+    double var2 = 0.0;
+    UnitAlgebra unitalgebra;
+    MapSubTest subtest;
+    std::vector<int> var3;
+    std::vector<MapSubTest*> subtest_vec;
+
+    MapTest()
+    {
+        unitalgebra.init("10GHz");
+        subtest_vec.push_back(&subtest);
+        subtest.parent = this;
+    }
+    
+    void serialize_order(SST::Core::Serialization::serializer& ser)
+    {
+        SST_SER(var1);
+        SST_SER(var2);
+        SST_SER(unitalgebra);
+        SST_SER(subtest);
+        SST_SER(var3);
+        SST_SER(subtest_vec);
+    }
+
+    void print()
+    {
+        printf("var1 = %" PRIu64 "\n", var1);
+        printf("var2 = %f\n", var2);
+        printf("subtest:\n");
+        subtest.print();
+        printf("var3:\n");
+        for ( auto x : var3 ) printf(" %d\n", x);
+    }
+};
+
+// template<typename T>
+// struct etest {
+
+//     void operator()(int a, T*& b, SST::Core::Serialization::serializer& c) {}
+//     // void foo() {printf("foo\n");}
+//     void bar() {printf("bar\n");}
+// };
+
+
 int
 main(int argc, char* argv[])
 {
+    printf("%zu\n",sizeof(std::string));
+    
+    MapTest map_test;
+
+    SST::Core::Serialization::serializer ser;
+    SST::Core::Serialization::ObjectMap* obj_map = new SST::Core::Serialization::ObjectMapClass();
+    ser.enable_pointer_tracking();
+    ser.start_mapping(obj_map);
+    
+
+    map_test.var1 = 5;
+    map_test.var2 = 10.1;
+    map_test.var3.push_back(2);
+    map_test.var3.push_back(4);
+    map_test.var3.push_back(6);
+
+    map_test.subtest.sub1 = 15;
+    map_test.subtest.sub2 = 'd';
+    map_test.subtest.sub3 = "hello";
+    map_test.subtest.sub4 = 275.6;
+
+    printf("Calling serializer in mapping mode:\n");
+    sst_map_object(ser, map_test, "map_test");
+    // map_test.serialize_order(ser);
+
+    // auto& vars = obj_map->select("map_test")->getVariables();
+    // printf("Variables mapped:\n");
+    // for ( auto* x : vars ) {
+    //     printf("  %s, %s\n", x->getName().c_str(), x->getType().c_str());
+    //     if ( !x->isFundamental() ) {
+    //         for ( auto* y : x->getVariables() ) {
+    //             printf("    %s, %s\n", y->getName().c_str(), y->getType().c_str());
+    //         }
+    //     }
+    // }
+    printf("\n\n");
+
+    printf("Contents of map_test before running ObjectExplorer:\n");
+    map_test.print();
+    printf("\n\n");
+           
+    printf("Starting ObjectExplorer:\n\n");
+    ObjectExplorer* ex = new ObjectExplorer(obj_map);
+    ex->explore();
+    
+
+    printf("Contents of map_test after running ObjectExplorer:\n");
+    map_test.print();
+            
+
+    printf("Serializing map_test...\n\n");
+    char* buffer;
+    size_t size;
+    ser.start_sizing();
+    map_test.serialize_order(ser);
+
+    size = ser.size();
+    buffer = new char[size];
+
+    ser.start_packing(buffer, size);
+    map_test.serialize_order(ser);
+
+    MapTest maptest2;
+    printf("map_test2 (empty) before deserialization:\n");
+    maptest2.print();
+    printf("\n\n");
+    ser.start_unpacking(buffer,size);
+    
+    maptest2.serialize_order(ser);
+    printf("map_test2 after deserialization:\n");
+    maptest2.print();
+
+    // exit(1);
+
+
+    
 #ifdef SST_CONFIG_HAVE_MPI
     // Initialize MPI
     MPI_Init(&argc, &argv);
