@@ -643,7 +643,7 @@ start_simulation(uint32_t tid, SimThreadInfo_t& info, Core::ThreadSafe::Barrier&
     // are writing to console, in which case we will serialize the
     // output as well.
     FILE*       fp   = nullptr;
-    std::string file = info.config->profilingOutput();
+    std::string file = info.config->profiling_output();
     if ( file == "stdout" ) {
         // Output to the console, so we will force both rank and
         // thread output to be sequential

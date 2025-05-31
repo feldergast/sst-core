@@ -44,7 +44,9 @@ public:
 
 protected:
     void addLibraryPathOptions();
+    void addLibraryPathOptions2();
     void addEnvironmentOptions();
+    void addEnvironmentOptions2();
     void addVerboseOptions(bool sdl_avail);
 
     /**
@@ -78,12 +80,18 @@ protected:
 private:
     //// Libpath options
 
+
+    DECL_OPTION(std::string, libpath, "", &StandardConfigParsers::from_string<std::string>);
+
     // lib path
     int setLibPath(const std::string& arg)
     {
         libpath_ = arg;
         return 0;
     }
+
+    DECL_OPTION(std::string, addLibPath, "",
+        std::bind(&StandardConfigParsers::append_string, ":", "", std::placeholders::_1, std::placeholders::_2));
 
     // add to lib path
     int setAddLibPath(const std::string& arg)
@@ -95,12 +103,16 @@ private:
 
     //// Environment Options
 
+    DECL_OPTION(bool, print_env, false, &StandardConfigParsers::flag_set_true);
+
     int enablePrintEnv(const std::string& UNUSED(arg))
     {
         printf("enablePrintEnv()\n");
         print_env_ = true;
         return 0;
     }
+
+    DECL_OPTION(bool, no_env_config, false, &StandardConfigParsers::flag_set_true);
 
     int disableEnvConfig(const std::string& UNUSED(arg))
     {

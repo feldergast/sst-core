@@ -14,6 +14,7 @@
 #include "sst/core/configBase.h"
 
 #include "sst/core/env/envquery.h"
+#include "sst/core/unitAlgebra.h"
 #include "sst/core/util/smartTextFormatter.h"
 #include "sst/core/warnmacros.h"
 
@@ -32,6 +33,141 @@
 #endif
 
 namespace SST {
+
+std::string ConfigBase::currently_parsing_option = "";
+
+namespace StandardConfigParsers {
+
+int
+nonempty_string(std::string& var, std::string arg)
+{
+    if ( var.empty() ) {
+        fprintf(stderr, "Error, option %s must not be an empty string\n", ConfigBase::currently_parsing_option.c_str());
+        return -1;
+    }
+    var = arg;
+    return 0;
+}
+
+int
+append_string(std::string pre, std::string post, std::string& var, std::string arg)
+{
+    if ( var.empty() ) {
+        var = arg;
+    }
+    else {
+        var += pre + arg + post;
+    }
+    return 0;
+}
+
+int
+flag_set_true(bool& var, std::string UNUSED(arg))
+{
+    var = true;
+    return 0;
+}
+
+int
+flag_set_false(bool& var, std::string UNUSED(arg))
+{
+    var = false;
+    return 0;
+}
+
+int
+flag_default_true(bool& var, std::string arg)
+{
+    if ( arg == "" ) {
+        var = true;
+    }
+    else {
+        try {
+            var = SST::Core::from_string<bool>(arg);
+        }
+        catch ( std::exception& e ) {
+            fprintf(stderr, "ERROR: Failed to parse \"%s\" as a boolean\n", arg.c_str());
+            return -1;
+        }
+    }
+    return 0;
+}
+
+int
+flag_default_false(bool& var, std::string arg)
+{
+    if ( arg == "" ) {
+        var = false;
+    }
+    else {
+        try {
+            var = SST::Core::from_string<bool>(arg);
+        }
+        catch ( std::exception& e ) {
+            fprintf(stderr, "ERROR: Failed to parse \"%s\" as a boolean\n", arg.c_str());
+            return -1;
+        }
+    }
+    return 0;
+}
+
+int
+wall_time_to_seconds(uint32_t& var, std::string arg)
+{
+    // first attempt to parse seconds only. Assume \d+[s] until it's not
+    char*         pos;
+    unsigned long seconds = strtoul(arg.c_str(), &pos, 10);
+    while ( isspace(*pos) )
+        ++pos;
+    if ( *pos == 's' || *pos == 'S' ) {
+        while ( isspace(*++pos) )
+            ;
+        if ( !*pos ) {
+            if ( seconds <= UINT32_MAX ) {
+                var = seconds;
+                return 0;
+            }
+        }
+    }
+
+    static const char* templates[] = { "%H:%M:%S", "%M:%S", "%S", "%Hh", "%Mm", "%Ss" };
+    const size_t       n_templ     = sizeof(templates) / sizeof(templates[0]);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+    struct tm res = {}; /* This warns on GCC 4.8 due to a bug in GCC */
+#pragma GCC diagnostic pop
+    char* p;
+
+    for ( size_t i = 0; i < n_templ; i++ ) {
+        memset(&res, '\0', sizeof(res));
+        p = strptime(arg.c_str(), templates[i], &res);
+        if ( p != nullptr && *p == '\0' ) {
+            seconds = res.tm_sec;
+            seconds += res.tm_min * 60;
+            seconds += res.tm_hour * 60 * 60;
+            var = seconds;
+            return 0;
+        }
+    }
+    fprintf(
+        stderr, "ERROR: Wall time argument could not be parsed. Argument = [%s]\nValid formats are:\n", arg.c_str());
+    for ( size_t i = 0; i < n_templ; i++ ) {
+        fprintf(stderr, "\t%s\n", templates[i]);
+    }
+    return -1;
+}
+
+int
+element_name(std::string& var, std::string arg)
+{
+    var = arg;
+    if ( arg.find('.') == arg.npos ) {
+        arg = "sst." + arg;
+    }
+    return 0;
+}
+} // namespace StandardConfigParsers
+
 
 bool
 ConfigBase::parseBoolean(const std::string& arg, bool& success, const std::string& option)
@@ -158,12 +294,69 @@ ConfigBase::addOption(struct option opt, const char* argname, const char* desc,
 }
 
 void
+ConfigBase::addOption2(
+    struct option opt, const char* argname, const char* desc, std::vector<bool> annotations, OptionDefinition* def)
+{
+    // Put this into the options vector
+    options2.emplace_back(opt, argname, desc, false, annotations, def);
+
+    LongOption2& new_option = options2.back();
+
+    // Increment the number of options
+    num_options2++;
+
+    // See if there is extended help
+    if ( def->ext_help ) has_extended_help_ = true;
+
+    // See if this is the longest option
+    size_t size = 0;
+    if ( new_option.opt.name != nullptr ) {
+        size = strlen(new_option.opt.name);
+    }
+    if ( new_option.argname != "" ) {
+        size += new_option.argname.size() + 1;
+    }
+    if ( size > longest_option2 ) longest_option2 = size;
+
+    if ( new_option.opt.val != 0 ) {
+        // Put value in short option map with the index of where
+        // to find the optoin in options vector.
+        short_options2[(char)new_option.opt.val] = options2.size() - 1;
+
+        // short_options_string lists all the available short
+        // options.  If followed by a single colon, an argument is
+        // required.  If followed by two colons, an argument is
+        // optonsal.  No colon means no arguments.
+        short_options_string2.push_back((char)new_option.opt.val);
+        if ( new_option.opt.has_arg == required_argument ) {
+            short_options_string2.push_back(':');
+        }
+        else if ( new_option.opt.has_arg == optional_argument ) {
+            short_options_string2.append("::");
+        }
+    }
+
+    // Handle any extra help functions
+    if ( def->ext_help ) {
+        extra_help_map[opt.name] = def->ext_help;
+    }
+}
+
+void
 ConfigBase::addHeading(const char* desc)
 {
     struct option     opt = { "", optional_argument, 0, 0 };
     std::vector<bool> vec;
     options.emplace_back(
         opt, "", desc, std::function<int(const char* arg)>(), true, vec, std::function<std::string()>(), false);
+}
+
+void
+ConfigBase::addHeading2(const char* desc)
+{
+    struct option     opt = { "", optional_argument, 0, 0 };
+    std::vector<bool> vec;
+    options2.emplace_back(opt, "", desc, true, vec, nullptr);
 }
 
 std::string

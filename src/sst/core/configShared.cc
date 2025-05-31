@@ -39,9 +39,19 @@ ConfigShared::addLibraryPathOptions()
     using namespace std::placeholders;
     // Add the options
     DEF_ARG("lib-path", 0, "LIBPATH", "Component library path (overwrites default)",
-        std::bind(&ConfigShared::setLibPath, this, _1), false);
+        std::bind(&ConfigShared::setLibPath, this, _1), false, true, false);
     DEF_ARG("add-lib-path", 0, "LIBPATH", "Component library path (appends to main path)",
-        std::bind(&ConfigShared::setAddLibPath, this, _1), false);
+        std::bind(&ConfigShared::setAddLibPath, this, _1), false, true, false);
+}
+
+void
+ConfigShared::addLibraryPathOptions2()
+{
+    using namespace std::placeholders;
+    // Add the options
+    DEF_ARG2("lib-path", 0, "LIBPATH", "Component library path (overwrites default)", libpath2_, false, true, false);
+    DEF_ARG2("add-lib-path", 0, "LIBPATH", "Component library path (appends to main path)", addLibPath2_, false, true,
+        false);
 }
 
 void
@@ -49,10 +59,19 @@ ConfigShared::addEnvironmentOptions()
 {
     using namespace std::placeholders;
     // Add the options
-    DEF_FLAG(
-        "print-env", 0, "Print environment variables SST will see", std::bind(&ConfigShared::enablePrintEnv, this, _1));
+    DEF_FLAG("print-env", 0, "Print environment variables SST will see",
+        std::bind(&ConfigShared::enablePrintEnv, this, _1), false, false, false);
     DEF_FLAG("no-env-config", 0, "Disable SST environment configuration",
-        std::bind(&ConfigShared::disableEnvConfig, this, _1));
+        std::bind(&ConfigShared::disableEnvConfig, this, _1), false, false, false);
+}
+
+void
+ConfigShared::addEnvironmentOptions2()
+{
+    using namespace std::placeholders;
+    // Add the options
+    DEF_FLAG2("print-env", 0, "Print environment variables SST will see", print_env2_, false, false, false);
+    DEF_FLAG2("no-env-config", 0, "Disable SST environment configuration", no_env_config2_, false, false, false);
 }
 
 void

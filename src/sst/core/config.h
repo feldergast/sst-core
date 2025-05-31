@@ -23,11 +23,48 @@
 /* Forward declare for Friendship */
 extern int main(int argc, char** argv);
 
+#define APPEND_FOR_DEC_OPTION(first, second) first##second
+
+#define DEC_OPTION(type, name, default_val)            \
+                                                       \
+public:                                                \
+    type name() const                                  \
+    {                                                  \
+        return APPEND_FOR_DEC_OPTION(name, _);         \
+    }                                                  \
+                                                       \
+private:                                               \
+    type APPEND_FOR_DEC_OPTION(name, _) = default_val; \
+                                                       \
+public:
+
+#define DEC_OPTION_STR(name, default_val)                     \
+                                                              \
+public:                                                       \
+    const std::string& name() const                           \
+    {                                                         \
+        return APPEND_FOR_DEC_OPTION(name, _);                \
+    }                                                         \
+                                                              \
+private:                                                      \
+    std::string APPEND_FOR_DEC_OPTION(name, _) = default_val; \
+                                                              \
+public:
+
 namespace SST {
 class Config;
 
 class ConfigHelper;
 class SSTModelDescription;
+class UnitAlgebra;
+
+namespace StandardConfigParsers {
+
+int check_unitalgebra_store_string(std::string valid_units, std::string& var, std::string arg);
+
+} // namespace StandardConfigParsers
+
+
 /**
  * Class to contain SST Simulation Configuration variables.
  *
@@ -95,120 +132,244 @@ public:
        uint32_t verbose() const { return verbose_; }
     */
 
+    /********************************************************************
+     * Define all the options in the Config object
+     *
+     * This section uses the DEC_OPTION macro that defines both the
+     * variable (name_) and the getter function (name())
+     ********************************************************************/
+
+    /**** Informational Options ****/
+
+    /**
+      Print the usage text
+    */
+    int parseUsage(std::string UNUSED(arg))
+    {
+        return printUsage();
+    }
+    
+    DECL_OPTION_INFO(usage, std::bind(&Config::parseUsage, this, std::placeholders::_1));
+
+    /**
+       Print extended help
+     */
+    int parseHelp(std::string arg)
+    {
+        if ( !arg.empty() ) return printExtHelp(arg);
+        return printUsage();
+    }
+    
+    DECL_OPTION_INFO(help, std::bind(&Config::parseHelp, this, std::placeholders::_1));
+
+    /**
+       Print version info
+     */
+    static int parseVersion(std::string UNUSED(arg))
+    {
+        printf("SST-Core Version (" PACKAGE_VERSION);
+        if ( strcmp(SSTCORE_GIT_HEADSHA, PACKAGE_VERSION) ) {
+            printf(", git branch : " SSTCORE_GIT_BRANCH);
+            printf(", SHA: " SSTCORE_GIT_HEADSHA);
+        }
+        printf(")\n");
+
+        return 1; /* Should not continue, but clean exit */        
+    }
+    
+    DECL_OPTION_INFO(version, std::bind(&Config::parseVersion, std::placeholders::_1));
+
+
+    /**** Basic Options ****/
+    /**
+       Number of ranks in the simulation
+     */
+    DEC_OPTION(uint32_t, num_ranks, 1);
 
     /**
        Number of threads requested
     */
-    uint32_t num_threads() const { return num_threads_; }
+    DEC_OPTION(uint32_t, num_threads, 1);
 
-    /**
-       Number of ranks in the simulation
-     */
-    uint32_t num_ranks() const { return num_ranks_; }
+    DECL_OPTION(uint32_t, num_threads, 1, &StandardConfigParsers::from_string<uint32_t>);
 
     /**
        Name of the SDL file to use to genearte the simulation
     */
-    const std::string& configFile() const { return configFile_; }
+    DEC_OPTION_STR(configFile, "NONE");
+
+    DECL_OPTION(std::string, configFile, "NONE", &StandardConfigParsers::from_string<std::string>);
 
     /**
        Model options to pass to the SDL file
     */
-    const std::string& model_options() const { return model_options_; }
+    DEC_OPTION_STR(model_options, "");
+
+    DECL_OPTION(std::string, model_options, "",
+        std::bind(&StandardConfigParsers::append_string, " \"", "\"", std::placeholders::_1, std::placeholders::_2));
 
     /**
        Print SST timing information after the run
     */
-    bool print_timing() const { return print_timing_; }
+    DEC_OPTION(bool, print_timing, false);
+
+    DECL_OPTION(bool, print_timing, false, &StandardConfigParsers::flag_default_true);
 
     /**
        Simulated cycle to stop the simulation at
     */
-    const std::string& stop_at() const { return stop_at_; }
+    DEC_OPTION_STR(stop_at, "0ns");
+
+    DECL_OPTION(std::string, stop_at, "0ns", &StandardConfigParsers::from_string<std::string>);
 
     /**
        Wall clock time (approximiate) in seconds to stop the simulation at
     */
-    uint32_t exit_after() const { return exit_after_; }
+    DEC_OPTION(uint32_t, exit_after, 0);
+
+    DECL_OPTION(uint32_t, exit_after, 0, &StandardConfigParsers::wall_time_to_seconds);
 
     /**
        Partitioner to use for parallel simulations
     */
-    const std::string& partitioner() const { return partitioner_; }
+    DEC_OPTION_STR(partitioner, "sst.linear");
 
-    /**
-       Simulation period at which to print out a "heartbeat" message
-    */
-    const std::string& heartbeat_sim_period() const { return heartbeat_sim_period_; }
+    DECL_OPTION(std::string, partitioner, "sst.linear", &StandardConfigParsers::element_name);
 
     /**
        Wall-clock period at which to print out a "heartbeat" message
     */
-    uint32_t heartbeat_wall_period() const { return heartbeat_wall_period_; }
+    DEC_OPTION(uint32_t, heartbeat_wall_period, 0);
+
+    DECL_OPTION(uint32_t, heartbeat_wall_period, 0, &StandardConfigParsers::wall_time_to_seconds);
+
+    /**
+       Simulation period at which to print out a "heartbeat" message
+    */
+    DEC_OPTION_STR(heartbeat_sim_period, "");
+
+    DECL_OPTION(std::string, heartbeat_sim_period, "",
+        std::bind(&StandardConfigParsers::check_unitalgebra_store_string, "s, Hz", std::placeholders::_1,
+            std::placeholders::_2));
 
     /**
        The directory to be used for writting output files
     */
-    const std::string& output_directory() const { return output_directory_; }
+    DEC_OPTION_STR(output_directory, "");
+
+    DECL_OPTION(std::string, output_directory, "", &StandardConfigParsers::from_string<std::string>);
 
     /**
        Prefix to use for the default SST::Output object in core
     */
-    const std::string output_core_prefix() const { return output_core_prefix_; }
+    DEC_OPTION_STR(output_core_prefix, "@x SST Core: ");
 
-    // Configuration output
+    DECL_OPTION(std::string, output_core_prefix, "@x SST Core: ", &StandardConfigParsers::from_string<std::string>);
+
+
+    /**** Configuration output ****/
 
     /**
        File to output python formatted  config graph to (empty string means no
        output)
     */
-    const std::string& output_config_graph() const { return output_config_graph_; }
+    DEC_OPTION_STR(output_config_graph, "");
+
+    DECL_OPTION(std::string, output_config_graph, "", &StandardConfigParsers::from_string<std::string>);
 
     /**
        File to output json formatted config graph to (empty string means no
        output)
     */
-    const std::string& output_json() const { return output_json_; }
+    DEC_OPTION_STR(output_json, "");
+
+    DECL_OPTION(std::string, output_json, "", &StandardConfigParsers::from_string<std::string>);
 
     /**
        If true, and a config graph output option is specified, write
        each ranks graph separately
     */
-    bool parallel_output() const { return parallel_output_; }
+#ifdef SST_CONFIG_HAVE_MPI
+    int parse_parallel_output(bool& var, std::string arg)
+    {
+        if ( num_ranks_ == 0 ) return 0;
+
+        int ret_code = StandardConfigParsers::flag_default_true(var, arg);
+        if ( ret_code != 0 ) return ret_code;
+
+        // If parallel_output_ (var) is true, we also need output_partition_
+        // to be true.
+        if ( var ) output_partition2_.value1 = true;
+        return 0;
+    }
+
+    DEC_OPTION(bool, parallel_output, false);
+
+    DECL_OPTION(bool, parallel_output, false,
+        std::bind(&Config::parse_parallel_output, this, std::placeholders::_1, std::placeholders::_2));
+#endif
 
 
-    // Graph output
+    /**** Graph output ****/
 
     /**
        File to output dot formatted config graph to (empty string means no
        output).  Note, this is not a format that can be used as input for simulation
 
     */
-    const std::string& output_dot() const { return output_dot_; }
+    DEC_OPTION_STR(output_dot, "");
+
+    DECL_OPTION(std::string, output_dot, "", &StandardConfigParsers::from_string<std::string>);
 
     /**
        Level of verbosity to use for the dot output.
     */
-    uint32_t dot_verbosity() const { return dot_verbosity_; }
+    DEC_OPTION(uint32_t, dot_verbosity, 0);
 
-    /**
-       File to output component partition info to (empty string means no output)
-    */
-    const std::string& component_partition_file() const { return component_partition_file_; }
+    DECL_OPTION(uint32_t, dot_verbosity, 0, &StandardConfigParsers::from_string<uint32_t>);
 
     /**
        Controls whether partition info is output as part of configuration output
      */
-    bool output_partition() const { return output_partition_; }
+    DEC_OPTION(bool, output_partition, false);
 
-    // Advanced options
+    int parse_output_partition(bool& output_part_flag, std::string& file_name, std::string arg)
+    {
+        if ( arg == "" ) {
+            output_part_flag = true;
+        }
+        else {
+            file_name = arg;
+        }
+        return 0;
+    }
+
+    DECL_OPTION_PAIR(bool, output_partition, false, std::string, component_partition_file, "",
+        std::bind(&Config::parse_output_partition, this, std::placeholders::_1, std::placeholders::_2,
+            std::placeholders::_3));
+    /**
+       File to output component partition info to (empty string means no output)
+    */
+    DEC_OPTION_STR(component_partition_file, "");
+
+    // DEC_OPTION(component_partition_file, "");
+
+    /**** Advanced options ****/
 
     /**
        Core timebase to use as the atomic time unit for the
        simulation.  It is usually best to just leave this at the
        default (1ps)
     */
-    const std::string& timeBase() const { return timeBase_; }
+    DEC_OPTION_STR(timeBase, "1ps");
+
+    static std::string ext_help_timebase();
+
+    DECL_OPTION(std::string, timeBase, "1ps",
+        std::bind(&StandardConfigParsers::check_unitalgebra_store_string, "s, Hz", std::placeholders::_1,
+            std::placeholders::_2),
+        &Config::ext_help_timebase);
+
 
     /**
        Controls whether graph constuction will be done in parallel.
@@ -216,14 +377,14 @@ public:
        number to the file name right before the file extension, if
        parallel_load_mode_multi is true.
     */
-    bool parallel_load() const { return parallel_load_; }
+    DEC_OPTION(bool, parallel_load, false);
 
     /**
        If graph constuction will be done in parallel, will use a
        file per rank if true, and the same file for each rank if
        false.
     */
-    bool parallel_load_mode_multi() const { return parallel_load_mode_multi_; }
+    DEC_OPTION(bool, parallel_load_mode_multi, true);
 
     /**
        Returns the string equivalent for parallel-load: NONE (if
@@ -236,51 +397,79 @@ public:
         return "SINGLE";
     }
 
-    /**
-     * Interval at which to create a checkpoint in wall time
-     */
-    uint32_t           checkpoint_wall_period() const { return checkpoint_wall_period_; }
-    /**
-     * Interval at which to create a checkpoint in simulated time
-     */
-    const std::string& checkpoint_sim_period() const { return checkpoint_sim_period_; }
 
-    /**
-     * Returns whether the simulation will begin from a checkpoint (true) or not (false).
-     */
-    bool load_from_checkpoint() const { return load_from_checkpoint_; }
+#ifdef SST_CONFIG_HAVE_MPI
+    int parse_parallel_load(bool& parallel_load, bool& parallel_load_mode_multi, std::string arg)
+    {
+        // If this is only a one rank job, then we can ignore
+        if ( num_ranks_ == 1 ) return 0;
 
-    /**
-       Prefix for checkpoint filenames and directory
-    */
-    const std::string& checkpoint_prefix() const { return checkpoint_prefix_; }
+        if ( arg == "" ) {
+            parallel_load = true;
+            return 0;
+        }
 
-    /**
-       Format for checkout filenames
-    */
-    const std::string& checkpoint_name_format() const { return checkpoint_name_format_; }
+        std::string arg_lower(arg);
+        std::locale loc;
+        for ( auto& ch : arg_lower )
+            ch = std::tolower(ch, loc);
+
+        if ( arg_lower == "none" ) {
+            parallel_load = false;
+            return 0;
+        }
+        else
+            parallel_load = true;
+
+        if ( arg_lower == "single" )
+            parallel_load_mode_multi = false;
+        else if ( arg_lower == "multi" )
+            parallel_load_mode_multi = true;
+        else {
+            fprintf(stderr,
+                "Invalid option '%s' passed to --parallel-load.  Valid options are NONE, SINGLE and MULTI.\n",
+                arg.c_str());
+            return -1;
+        }
+        return 0;
+    }
+#endif
+
+    DECL_OPTION_PAIR(bool, parallel_load, false, bool, parallel_load_mode_multi, true,
+        std::bind(
+            &Config::parse_parallel_load, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
     /**
        TimeVortex implementation to use
     */
-    const std::string& timeVortex() const { return timeVortex_; }
+    DEC_OPTION_STR(timeVortex, "sst.timevortex.priority_queue");
+
+    DECL_OPTION(
+        std::string, timeVortex, "sst.timevortex.priority_queue", &StandardConfigParsers::from_string<std::string>);
 
     /**
        Use links that connect directly to ActivityQueue in receiving thread
     */
-    bool interthread_links() const { return interthread_links_; }
+    DEC_OPTION(bool, interthread_links, false);
+
+    DECL_OPTION(bool, interthread_links, false, &StandardConfigParsers::flag_default_true);
+
 
 #ifdef USE_MEMPOOL
     /**
        Controls whether mempool items are cache-aligned
 
     */
-    bool cache_align_mempools() const { return cache_align_mempools_; }
+    DEC_OPTION(bool, cache_align_mempools, false);
+
+    DECL_OPTION(bool, cache_align_mempools, false, &StandardConfigParsers::flag_default_true);
 #endif
     /**
        File to which core debug information should be written
     */
-    const std::string& debugFile() const { return debugFile_; }
+    DEC_OPTION_STR(debugFile, "/dev/null");
+
+    DECL_OPTION(std::string, debugFile, "/dev/null", &StandardConfigParsers::from_string<std::string>);
 
     /**
        Library path to use for finding element libraries (will replace
@@ -303,29 +492,62 @@ public:
     /**
        Controls whether the Python coverage object will be loaded
      */
-    bool enablePythonCoverage() const { return enable_python_coverage_; }
+    DEC_OPTION(bool, enable_python_coverage, false);
+
+    static std::string ext_help_enable_python_coverage();
+
+    DECL_OPTION(bool, enable_python_coverage, false, &StandardConfigParsers::flag_set_true,
+        &Config::ext_help_enable_python_coverage);
 #endif
 
-    // Advanced options - Profiling
+
+    /**** Advanced options - Profiling ****/
 
     /**
        Profiling points to turn on
      */
-    const std::string& enabledProfiling() const { return enabled_profiling_; }
+    DEC_OPTION_STR(enabled_profiling, "");
+
+    static std::string ext_help_enable_profiling();
+
+    DECL_OPTION(std::string, enabled_profiling, "",
+        std::bind(&StandardConfigParsers::append_string, ";", "", std::placeholders::_1, std::placeholders::_2),
+        &Config::ext_help_enable_profiling);
 
     /**
        Profiling points to turn on
      */
-    const std::string& profilingOutput() const { return profiling_output_; }
+    DEC_OPTION_STR(profiling_output, "stdout");
 
-    // Advanced options - Debug
+    DECL_OPTION(std::string, profiling_output, "stdout", &StandardConfigParsers::from_string<std::string>);
+
+
+    /**** Advanced options - Debug ****/
 
     /**
        Run mode to use (Init, Both, Run-only).  Note that Run-only is
        not currently supported because there is not component level
        checkpointing.
     */
-    SimulationRunMode runMode() const { return runMode_; }
+    DEC_OPTION(SimulationRunMode, runMode, SimulationRunMode::BOTH);
+
+    static int parseRunMode(SimulationRunMode& val, std::string arg)
+    {
+        if ( !arg.compare("init") )
+            val = SimulationRunMode::INIT;
+        else if ( !arg.compare("run") )
+            val = SimulationRunMode::RUN;
+        else if ( !arg.compare("both") )
+            val = SimulationRunMode::BOTH;
+        else {
+            fprintf(stderr, "Unknown option for --run-mode: %s\n", arg.c_str());
+            val = SimulationRunMode::UNKNOWN;
+        }
+
+        return val != SimulationRunMode::UNKNOWN ? 0 : -1;
+    }
+
+    DECL_OPTION(SimulationRunMode, runMode, SimulationRunMode::BOTH, &Config::parseRunMode);
 
     /**
        Get string version of runmode.
@@ -348,12 +570,18 @@ public:
     /**
        Get the InteractiveAction to use for interactive mode
      */
-    std::string interactive_console() const { return interactive_console_; }
+    DEC_OPTION_STR(interactive_console, "");
+
+    DECL_OPTION(std::string, interactive_console, "", &StandardConfigParsers::from_string<std::string>);
 
     /**
        Get the time to start interactive mode
     */
-    std::string interactive_start_time() const { return interactive_start_time_; }
+    DEC_OPTION_STR(interactive_start_time, "");
+
+    DECL_OPTION(std::string, interactive_start_time, "",
+        std::bind(&StandardConfigParsers::from_string_default<std::string>, std::placeholders::_1,
+            std::placeholders::_2, "0"));
 
 
 #ifdef USE_MEMPOOL
@@ -364,16 +592,21 @@ public:
        If no mempools, just reutrn empty string.  This avoids a check
     for mempools in main.cc
     */
-    const std::string& event_dump_file() const { return event_dump_file_; }
+    DEC_OPTION_STR(event_dump_file, "");
+
+    DECL_OPTION(std::string, event_dump_file, "", &StandardConfigParsers::from_string<std::string>);
 #endif
 
     /**
        Run simulation initialization stages one rank at a time for
        debug purposes
      */
-    bool rank_seq_startup() const { return rank_seq_startup_; }
+    DEC_OPTION(bool, rank_seq_startup, false);
 
-    // Advanced options - envrionment
+    DECL_OPTION(bool, rank_seq_startup, false, &StandardConfigParsers::flag_set_true);
+
+
+    /**** Advanced options - envrionment ****/
 
     /**
        Controls whether the environment variables that SST sees are
@@ -393,27 +626,87 @@ public:
        sense of this variable is opposite of the command1 line option
        (--disable-signal-handlers)
     */
-    bool enable_sig_handling() const { return enable_sig_handling_; }
+    DEC_OPTION(bool, enable_sig_handling, true);
+
+    DECL_OPTION(bool, enable_sig_handling, true, &StandardConfigParsers::flag_set_false);
 
     /**
      * SIGUSR1 handler
      */
-    const std::string& sigusr1() const { return sigusr1_; }
+    DEC_OPTION_STR(sigusr1, "sst.rt.status.core");
+
+    static std::string ext_help_signals();
+
+    DECL_OPTION(std::string, sigusr1, "sst.rt.status.core", &StandardConfigParsers::from_string<std::string>,
+        Config::ext_help_signals);
 
     /**
      * SIGUSR2 handler
      */
-    const std::string& sigusr2() const { return sigusr2_; }
+    DEC_OPTION_STR(sigusr2, "sst.rt.status.all");
+
+    DECL_OPTION(std::string, sigusr2, "sst.rt.status.all", &StandardConfigParsers::from_string<std::string>,
+        Config::ext_help_signals);
 
     /**
      * SIGALRM handler(s)
      */
-    const std::string& sigalrm() const { return sigalrm_; }
+    DEC_OPTION_STR(sigalrm, "");
 
-    // This option is used by the SST wrapper found in
-    // bootshare.{h,cc} and is never actually accessed once sst.x
-    // executes.
+    DECL_OPTION(std::string, sigalrm, "",
+        std::bind(&StandardConfigParsers::append_string, ";", "", std::placeholders::_1, std::placeholders::_2),
+        Config::ext_help_signals);
 
+
+    /**** Advanced options - Checkpointing ****/
+
+    /**
+     * Interval at which to create a checkpoint in wall time
+     */
+    DEC_OPTION(uint32_t, checkpoint_wall_period, 0);
+
+    DECL_OPTION(uint32_t, checkpoint_wall_period, 0, &StandardConfigParsers::wall_time_to_seconds);
+
+    /**
+     * Interval at which to create a checkpoint in simulated time
+     */
+    DEC_OPTION_STR(checkpoint_sim_period, "");
+
+    DECL_OPTION(std::string, checkpoint_sim_period, "",
+        std::bind(&StandardConfigParsers::check_unitalgebra_store_string, "s, Hz", std::placeholders::_1,
+            std::placeholders::_2));
+
+    /**
+     * Returns whether the simulation will begin from a checkpoint (true) or not (false).
+     */
+    DEC_OPTION(bool, load_from_checkpoint, false);
+
+    DECL_OPTION(bool, load_from_checkpoint, false, &StandardConfigParsers::flag_set_true);
+
+    /**
+       Prefix for checkpoint filenames and directory
+    */
+    DEC_OPTION_STR(checkpoint_prefix, "checkpoint");
+
+    static std::string ext_help_checkpoint_prefix();
+
+    DECL_OPTION(std::string, checkpoint_prefix, "checkpoint", &StandardConfigParsers::nonempty_string,
+        &Config::ext_help_checkpoint_prefix);
+
+    /**
+       Format for checkout filenames
+    */
+    DEC_OPTION_STR(checkpoint_name_format, "%p_%n_%t/%p_%n_%t");
+
+    static int parse_checkpoint_name_format(std::string& var, std::string arg);
+
+    static std::string ext_help_checkpoint_format();
+
+    DECL_OPTION(std::string, checkpoint_name_format, "%p_%n_%t/%p_%n_%t",
+        std::bind(&Config::parse_checkpoint_name_format, std::placeholders::_1, std::placeholders::_2),
+        &Config::ext_help_checkpoint_format);
+
+public:
 
     /** Get whether or not any of the checkpoint options were turned on */
     bool canInitiateCheckpoint();
@@ -496,6 +789,10 @@ private:
     // structures
     void insertOptions();
 
+    // Inserts all the command line options into the underlying data
+    // structures
+    void insertOptions2();
+
     bool isFileNameOnly(const std::string& name)
     {
         bool nameOnly = true;
@@ -509,85 +806,6 @@ private:
 
         return nameOnly;
     }
-
-    // Variables to hold the options.  Declared in order they show up
-    // in the options array
-
-    // Information options
-    // No variable associated with help
-    // No variable associated with version
-
-    // Basic options
-    // uint32_t    verbose_; ** in ConfigShared
-    // Num threads held in RankInfo.thread
-    uint32_t    num_ranks_;             /*!< Number of ranks in the simulation */
-    uint32_t    num_threads_;           /*!< Number of threads requested */
-    std::string configFile_;            /*!< Graph generation file */
-    std::string model_options_;         /*!< Options to pass to Python Model generator */
-    bool        print_timing_;          /*!< Print SST timing information */
-    std::string stop_at_;               /*!< When to stop the simulation */
-    uint32_t    exit_after_;            /*!< When (wall-time) to stop the simulation */
-    std::string partitioner_;           /*!< Partitioner to use */
-    std::string heartbeat_sim_period_;  /*!< Sets the heartbeat (simulated time) period for the simulation */
-    uint32_t    heartbeat_wall_period_; /*!< Sets the heartbeat (wall-clock time) period for the simulation */
-    std::string output_directory_;      /*!< Output directory to dump all files to */
-    std::string output_core_prefix_;    /*!< Set the SST::Output prefix for the core */
-
-    // Configuration output
-    std::string output_config_graph_; /*!< File to dump configuration graph */
-    std::string output_json_;         /*!< File to dump JSON output */
-    bool        parallel_output_;     /*!< Output simulation graph in parallel */
-
-    // Graph output
-    std::string output_dot_;               /*!< File to dump dot output */
-    uint32_t    dot_verbosity_;            /*!< Amount of detail to include in the dot graph output */
-    std::string component_partition_file_; /*!< File to dump component graph */
-    bool        output_partition_;         /*!< Output paritition info when writing config output */
-
-    // Advanced options
-    std::string timeBase_;                 /*!< Timebase of simulation */
-    bool        parallel_load_;            /*!< Load simulation graph in parallel */
-    bool        parallel_load_mode_multi_; /*!< If true, load using multiple files */
-    std::string timeVortex_;               /*!< TimeVortex implementation to use */
-    bool        interthread_links_;        /*!< Use interthread links */
-#ifdef USE_MEMPOOL
-    bool cache_align_mempools_; /*!< Cache align allocations from mempools */
-#endif
-    std::string debugFile_; /*!< File to which debug information should be written */
-    // std::string libpath_;  ** in ConfigShared
-    // std::string addLibPath_; ** in ConfigShared
-#if PY_MINOR_VERSION >= 9
-    bool enable_python_coverage_; /*!< Enable the Python coverage module */
-#endif
-
-    // Advanced options - profiling
-    std::string enabled_profiling_; /*!< Enabled default profiling points */
-    std::string profiling_output_;  /*!< Location to write profiling data */
-
-    // Advanced options - debug
-    SimulationRunMode runMode_;                /*!< Run Mode (Init, Both, Run-only) */
-    std::string       interactive_console_;    /*!< Action to use for interactive mode */
-    std::string       interactive_start_time_; /*!< Time to drop into interactive mode */
-#ifdef USE_MEMPOOL
-    std::string event_dump_file_; /*!< File to dump undeleted events to  */
-#endif
-    bool rank_seq_startup_; /*!< Run simulation initialization phases one rank at a time */
-
-    // Advanced options - checkpoint
-    bool        load_from_checkpoint_;  /*!< If true, load from checkpoint instead of config file */
-    std::string checkpoint_sim_period_; /*!< Interval to generate checkpoints at in terms of the simulated clock */
-    uint32_t
-        checkpoint_wall_period_;    /*!< Interval to generate checkpoints at in terms of wall-clock measured seconds */
-    std::string checkpoint_prefix_; /*!< Prefix for checkpoint filename and checkpoint directory */
-    std::string checkpoint_name_format_; /*!< Format for checkpoint filenames */
-
-    // Advanced options - environment
-    bool        enable_sig_handling_; /*!< Enable signal handling */
-    std::string sigusr1_;             /*!< RealTimeAction to call on a SIGUSR1 */
-    std::string sigusr2_;             /*!< RealTimeAction to call on a SIGUSR2 */
-    std::string sigalrm_;             /*!< RealTimeAction(s) to call on a SIGALRM */
-    // bool print_env_;  ** in ConfigShared
-    // bool no_env_config_; ** in ConfigShared
 };
 
 } // namespace SST
