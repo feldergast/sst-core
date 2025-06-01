@@ -44,9 +44,7 @@ public:
 
 protected:
     void addLibraryPathOptions();
-    void addLibraryPathOptions2();
     void addEnvironmentOptions();
-    void addEnvironmentOptions2();
     void addVerboseOptions(bool sdl_avail);
 
     /**
@@ -62,76 +60,34 @@ protected:
         ConfigBase()
     {}
 
-    // Variables that will need to be serialized by child class since
-    // this class does not serialize itself due to being used in the
-    // bootwrapper executables.
-
-    //// Libpath options
-    std::string libpath_    = "";
-    std::string addlibpath_ = "";
-
-    //// Environment Options
-    bool print_env_     = false;
-    bool no_env_config_ = false;
-
-    //// Verbose Option
-    int verbose_ = 0;
-
 private:
     //// Libpath options
 
 
-    DECL_OPTION(std::string, libpath, "", &StandardConfigParsers::from_string<std::string>);
-
     // lib path
-    int setLibPath(const std::string& arg)
-    {
-        libpath_ = arg;
-        return 0;
-    }
+    DECL_OPTION(std::string, libpath, "", &StandardConfigParsers::from_string<std::string>);
 
     DECL_OPTION(std::string, addLibPath, "",
         std::bind(&StandardConfigParsers::append_string, ":", "", std::placeholders::_1, std::placeholders::_2));
 
-    // add to lib path
-    int setAddLibPath(const std::string& arg)
-    {
-        if ( addlibpath_.length() > 0 ) addlibpath_ += std::string(":");
-        addlibpath_ += arg;
-        return 0;
-    }
 
     //// Environment Options
 
     DECL_OPTION(bool, print_env, false, &StandardConfigParsers::flag_set_true);
 
-    int enablePrintEnv(const std::string& UNUSED(arg))
-    {
-        printf("enablePrintEnv()\n");
-        print_env_ = true;
-        return 0;
-    }
-
     DECL_OPTION(bool, no_env_config, false, &StandardConfigParsers::flag_set_true);
 
-    int disableEnvConfig(const std::string& UNUSED(arg))
-    {
-        printf("disableEnvConfig()\n");
-        no_env_config_ = true;
-        return 0;
-    }
 
     //// Verbose Option
-
-    int setVerbosity(const std::string& arg)
+    static int parse_verbosity(int32_t& val, std::string arg)
     {
         if ( arg == "" ) {
-            verbose_++;
+            val++;
             return 0;
         }
         try {
-            unsigned long val = stoul(arg);
-            verbose_          = val;
+            unsigned long value = stoul(arg);
+            val          = value;
             return 0;
         }
         catch ( std::invalid_argument& e ) {
@@ -140,20 +96,10 @@ private:
         }
     }
 
+    DECL_OPTION(int32_t, verbose, 0, &ConfigShared::parse_verbosity);
+
 
 public:
-    /**
-       Controls whether the environment variables that SST sees are
-       printed out
-    */
-    bool print_env() const { return print_env_; }
-
-    bool no_env_config() const { return no_env_config_; }
-
-    int verbose() const { return verbose_; }
-
-    std::string libpath() const { return libpath_; }
-    std::string addLibPath() const { return addlibpath_; }
 
     std::string getLibPath() const;
 };

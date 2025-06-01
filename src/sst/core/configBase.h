@@ -15,6 +15,7 @@
 #include "sst/core/from_string.h"
 #include "sst/core/sst_types.h"
 #include "sst/core/warnmacros.h"
+#include "sst/core/serialization/serialize.h"
 
 #include <functional>
 #include <getopt.h>
@@ -40,6 +41,7 @@ struct OptionDefinition
     virtual ~OptionDefinition()                  = default;
     virtual int  parse(std::string arg)          = 0;
     virtual void transfer(OptionDefinition* def) = 0;
+    virtual void serialize(SST::Core::Serialization::serializer& UNUSED(ser)) {}
 };
 
 struct OptionDefinitionInformational : OptionDefinition
@@ -100,6 +102,11 @@ struct OptionDefinitionImpl : OptionDefinition
     // from the command line and copy values when types aren't known
     int  parse(std::string arg) override { return parser(value, arg); }
     void transfer(OptionDefinition* def) override { value = dynamic_cast<OptionDefinitionImpl<T>*>(def)->value; }
+
+    void serialize(SST::Core::Serialization::serializer& ser) override
+    {
+        SST_SER(value);
+    }
 };
 
 
@@ -139,6 +146,12 @@ struct OptionDefinitionPair : OptionDefinition
         value1 = dynamic_cast<OptionDefinitionPair<T, U>*>(def)->value1;
         value2 = dynamic_cast<OptionDefinitionPair<T, U>*>(def)->value2;
     }
+
+    void serialize(SST::Core::Serialization::serializer& ser) override
+    {
+        SST_SER(value1);
+        SST_SER(value2);
+    }
 };
 
 
@@ -147,13 +160,13 @@ struct OptionDefinitionPair : OptionDefinition
 #define DECL_OPTION(type, name, default_val, ...)                                                 \
                                                                                                   \
 public:                                                                                           \
-    type APPEND_FOR_DECL_OPTION(name, 2)() const                                                  \
+    type name() const                                                  \
     {                                                                                             \
-        return APPEND_FOR_DECL_OPTION(name, 2_).value;                                            \
+        return APPEND_FOR_DECL_OPTION(name, _).value;                                            \
     }                                                                                             \
                                                                                                   \
 private:                                                                                          \
-    OptionDefinitionImpl<type> APPEND_FOR_DECL_OPTION(name, 2_) = { default_val, ##__VA_ARGS__ }; \
+    OptionDefinitionImpl<type> APPEND_FOR_DECL_OPTION(name, _) = { default_val, ##__VA_ARGS__ }; \
                                                                                                   \
 public:
 
@@ -161,19 +174,19 @@ public:
 #define DECL_OPTION_PAIR(type1, name1, default_val1, type2, name2, default_val2, ...) \
                                                                                       \
 public:                                                                               \
-    type1 APPEND_FOR_DECL_OPTION(name1, 2)() const                                    \
+    type1 name1() const                                    \
     {                                                                                 \
-        return APPEND_FOR_DECL_OPTION(name1, 2_).value1;                              \
+        return APPEND_FOR_DECL_OPTION(name1, _).value1;                              \
     }                                                                                 \
                                                                                       \
-    type2 APPEND_FOR_DECL_OPTION(name2, 2)() const                                    \
+    type2 name2() const                                    \
     {                                                                                 \
-        return APPEND_FOR_DECL_OPTION(name1, 2_).value2;                              \
+        return APPEND_FOR_DECL_OPTION(name1, _).value2;                              \
     }                                                                                 \
                                                                                       \
 private:                                                                              \
     OptionDefinitionPair<type1, type2> APPEND_FOR_DECL_OPTION(                        \
-        name1, 2_) = { default_val1, default_val2, ##__VA_ARGS__ };                   \
+        name1, _) = { default_val1, default_val2, ##__VA_ARGS__ };                   \
                                                                                       \
 public:
 
@@ -247,63 +260,12 @@ int element_name(std::string& var, std::string arg);
 } // namespace StandardConfigParsers
 
 
-class test
-{
-
-    static int parse(uint32_t& val, std::string arg)
-    {
-        val = SST::Core::from_string<uint32_t>(arg);
-        return 0;
-    }
-
-    static int parseWithPointer(test* t, int& val, std::string arg)
-    {
-        val                = SST::Core::from_string<int>(arg);
-        t->second_option2_ = t->first_option2_;
-        return 0;
-    }
-
-public:
-    DECL_OPTION(uint32_t, first_option, 0, &test::parse);
-    DECL_OPTION(uint64_t, second_option, 0, &StandardConfigParsers::from_string<uint64_t>);
-    DECL_OPTION(
-        int, third_value, 0, std::bind(&test::parseWithPointer, this, std::placeholders::_1, std::placeholders::_2));
-};
-
 /**
    Struct that holds all the getopt_long options along with the
    docuementation for the option
 */
+
 struct LongOption
-{
-    struct option                       opt;
-    std::string                         argname;
-    std::string                         desc;
-    std::function<int(const char* arg)> callback;
-    bool                                header; // if true, desc is actually the header
-    std::vector<bool>                   annotations;
-    std::function<std::string()>        ext_help;
-    mutable bool                        set_cmdline;
-
-    LongOption(struct option opt, const char* argname, const char* desc,
-        const std::function<int(const char* arg)>& callback, bool header, std::vector<bool> annotations,
-        std::function<std::string()> ext_help, bool set_cmdline) :
-        opt(opt),
-        argname(argname),
-        desc(desc),
-        callback(callback),
-        header(header),
-        annotations(annotations),
-        ext_help(ext_help),
-        set_cmdline(set_cmdline)
-    {}
-};
-/**
-   Struct that holds all the getopt_long options along with the
-   docuementation for the option
-*/
-
-struct LongOption2
 {
     struct option     opt;
     std::string       argname;
@@ -313,7 +275,7 @@ struct LongOption2
     mutable bool      set_cmdline;
     OptionDefinition* def;
 
-    LongOption2(struct option opt, const char* argname, const char* desc, bool header, std::vector<bool> annotations,
+    LongOption(struct option opt, const char* argname, const char* desc, bool header, std::vector<bool> annotations,
         OptionDefinition* def) :
         opt(opt),
         argname(argname),
@@ -343,54 +305,20 @@ struct AnnotationInfo
 // shortName - single character name referenced using -
 // text - help text
 // func - function called if option is found
-#define DEF_FLAG_OPTVAL2(longName, shortName, text, def, ...) \
-    addOption2({ longName, optional_argument, 0, shortName }, "[BOOL]", text, { __VA_ARGS__ }, &def);
+#define DEF_FLAG_OPTVAL(longName, shortName, text, def, ...) \
+    addOption({ longName, optional_argument, 0, shortName }, "[BOOL]", text, { __VA_ARGS__ }, &def);
 
-#define DEF_FLAG2(longName, shortName, text, def, ...) \
-    addOption2({ longName, no_argument, 0, shortName }, "", text, { __VA_ARGS__ }, &def);
+#define DEF_FLAG(longName, shortName, text, def, ...) \
+    addOption({ longName, no_argument, 0, shortName }, "", text, { __VA_ARGS__ }, &def);
 
-#define DEF_ARG2(longName, shortName, argName, text, def, ...) \
-    addOption2({ longName, required_argument, 0, shortName }, argName, text, { __VA_ARGS__ }, &def);
+#define DEF_ARG(longName, shortName, argName, text, def, ...) \
+    addOption({ longName, required_argument, 0, shortName }, argName, text, { __VA_ARGS__ }, &def);
 
-#define DEF_ARG_OPTVAL2(longName, shortName, argName, text, def, ...) \
-    addOption2({ longName, optional_argument, 0, shortName }, "[" argName "]", text, { __VA_ARGS__ }, &def);
-
-
-#define DEF_SECTION_HEADING2(text) addHeading2(text);
-
-// Macros to make defining options easier.  These must be called
-// inside of a member function of a class inheriting from ConfigBase
-// Nomenaclature is:
-
-// FLAG - value is either true or false.  FLAG defaults to no arguments allowed
-// ARG - value is a string.  ARG defaults to required argument
-// OPTVAL - Takes an optional paramater
-
-// longName - multicharacter name referenced using --
-// shortName - single character name referenced using -
-// text - help text
-// func - function called if option is found
-#define DEF_FLAG_OPTVAL(longName, shortName, text, func, ...) \
-    addOption({ longName, optional_argument, 0, shortName }, "[BOOL]", text, func, { __VA_ARGS__ });
-
-#define DEF_FLAG(longName, shortName, text, func, ...) \
-    addOption({ longName, no_argument, 0, shortName }, "", text, func, { __VA_ARGS__ });
-
-#define DEF_ARG(longName, shortName, argName, text, func, ...) \
-    addOption({ longName, required_argument, 0, shortName }, argName, text, func, { __VA_ARGS__ });
-
-#define DEF_ARG_OPTVAL(longName, shortName, argName, text, func, ...) \
-    addOption({ longName, optional_argument, 0, shortName }, "[" argName "]", text, func, { __VA_ARGS__ });
-
-// Macros that include extended help
-#define DEF_FLAG_EH(longName, shortName, text, func, eh, ...) \
-    addOption({ longName, no_argument, 0, shortName }, "", text, func, { __VA_ARGS__ }, eh);
-
-#define DEF_ARG_EH(longName, shortName, argName, text, func, eh, ...) \
-    addOption({ longName, required_argument, 0, shortName }, argName, text, func, { __VA_ARGS__ }, eh);
+#define DEF_ARG_OPTVAL(longName, shortName, argName, text, def, ...) \
+    addOption({ longName, optional_argument, 0, shortName }, "[" argName "]", text, { __VA_ARGS__ }, &def);
 
 
-#define DEF_SECTION_HEADING(text) addHeading(text);
+#define DEF_SECTION_HEADING(text) addHeading2(text);
 
 
 /**
@@ -455,27 +383,13 @@ protected:
        the order they are in the input array, and across calls to the
        function.
      */
-    void addOption(struct option opt, const char* argname, const char* desc,
-        std::function<int(const char* arg)> callback, std::vector<bool> annotations,
-        std::function<std::string()> ext_help = std::function<std::string()>());
-
-    /**
-       Add options to the Config object.  The options will be added in
-       the order they are in the input array, and across calls to the
-       function.
-     */
-    void addOption2(
+    void addOption(
         struct option opt, const char* argname, const char* desc, std::vector<bool> annotations, OptionDefinition* def);
 
     /**
        Adds a heading to the usage output
      */
     void addHeading(const char* desc);
-
-    /**
-       Adds a heading to the usage output
-     */
-    void addHeading2(const char* desc);
 
     /**
        Called to get the prelude for the help/usage message
@@ -536,15 +450,10 @@ public:
 
 private:
     std::vector<LongOption>                      options;
-    std::vector<LongOption2>                     options2;
     std::map<char, int>                          short_options;
-    std::map<char, int>                          short_options2;
     std::string                                  short_options_string;
-    std::string                                  short_options_string2;
     size_t                                       longest_option  = 0;
-    size_t                                       longest_option2 = 0;
     size_t                                       num_options     = 0;
-    size_t                                       num_options2    = 0;
     std::function<int(const char* arg)>          dashdash_callback;
     std::function<int(int num, const char* arg)> positional_args;
 

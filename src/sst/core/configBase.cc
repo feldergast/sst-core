@@ -242,22 +242,19 @@ ConfigBase::parseWallTimeToSeconds(const std::string& arg, bool& success, const 
 }
 
 void
-ConfigBase::addOption(struct option opt, const char* argname, const char* desc,
-    std::function<int(const char* arg)> callback, std::vector<bool> annotations, std::function<std::string()> ext_help)
+ConfigBase::addOption(
+    struct option opt, const char* argname, const char* desc, std::vector<bool> annotations, OptionDefinition* def)
 {
     // Put this into the options vector
-    options.emplace_back(opt, argname, desc, callback, false, annotations, ext_help, false);
+    options.emplace_back(opt, argname, desc, false, annotations, def);
 
     LongOption& new_option = options.back();
-
-    // If this is a header, we're done
-    if ( new_option.header ) return;
 
     // Increment the number of options
     num_options++;
 
     // See if there is extended help
-    if ( ext_help ) has_extended_help_ = true;
+    if ( def->ext_help ) has_extended_help_ = true;
 
     // See if this is the longest option
     size_t size = 0;
@@ -288,55 +285,6 @@ ConfigBase::addOption(struct option opt, const char* argname, const char* desc,
     }
 
     // Handle any extra help functions
-    if ( ext_help ) {
-        extra_help_map[opt.name] = ext_help;
-    }
-}
-
-void
-ConfigBase::addOption2(
-    struct option opt, const char* argname, const char* desc, std::vector<bool> annotations, OptionDefinition* def)
-{
-    // Put this into the options vector
-    options2.emplace_back(opt, argname, desc, false, annotations, def);
-
-    LongOption2& new_option = options2.back();
-
-    // Increment the number of options
-    num_options2++;
-
-    // See if there is extended help
-    if ( def->ext_help ) has_extended_help_ = true;
-
-    // See if this is the longest option
-    size_t size = 0;
-    if ( new_option.opt.name != nullptr ) {
-        size = strlen(new_option.opt.name);
-    }
-    if ( new_option.argname != "" ) {
-        size += new_option.argname.size() + 1;
-    }
-    if ( size > longest_option2 ) longest_option2 = size;
-
-    if ( new_option.opt.val != 0 ) {
-        // Put value in short option map with the index of where
-        // to find the optoin in options vector.
-        short_options2[(char)new_option.opt.val] = options2.size() - 1;
-
-        // short_options_string lists all the available short
-        // options.  If followed by a single colon, an argument is
-        // required.  If followed by two colons, an argument is
-        // optonsal.  No colon means no arguments.
-        short_options_string2.push_back((char)new_option.opt.val);
-        if ( new_option.opt.has_arg == required_argument ) {
-            short_options_string2.push_back(':');
-        }
-        else if ( new_option.opt.has_arg == optional_argument ) {
-            short_options_string2.append("::");
-        }
-    }
-
-    // Handle any extra help functions
     if ( def->ext_help ) {
         extra_help_map[opt.name] = def->ext_help;
     }
@@ -347,16 +295,7 @@ ConfigBase::addHeading(const char* desc)
 {
     struct option     opt = { "", optional_argument, 0, 0 };
     std::vector<bool> vec;
-    options.emplace_back(
-        opt, "", desc, std::function<int(const char* arg)>(), true, vec, std::function<std::string()>(), false);
-}
-
-void
-ConfigBase::addHeading2(const char* desc)
-{
-    struct option     opt = { "", optional_argument, 0, 0 };
-    std::vector<bool> vec;
-    options2.emplace_back(opt, "", desc, true, vec, nullptr);
+    options.emplace_back(opt, "", desc, true, vec, nullptr);
 }
 
 std::string
@@ -454,7 +393,7 @@ ConfigBase::printUsage()
 
         // Print the annotations
         // First check for extended help
-        npos += fprintf(stderr, "%c", option.ext_help ? 'H' : ' ');
+        npos += fprintf(stderr, "%c", option.def->ext_help ? 'H' : ' ');
 
         // Now do the rest of the annotations
         for ( size_t i = 0; i < annotations_.size(); ++i ) {
@@ -599,18 +538,18 @@ ConfigBase::parseCmdLine(int argc, char* argv[], bool ignore_unknown)
             // Long options
             int real_index = option_map[option_index];
             if ( optarg )
-                status = options[real_index].callback(optarg);
+                status = options[real_index].def->parse(optarg);
             else
-                status = options[real_index].callback("");
+                status = options[real_index].def->parse("");
             if ( !status ) options[real_index].set_cmdline = true;
         }
         else {
             // Short option
             int real_index = short_options[c];
             if ( optarg )
-                status = options[real_index].callback(optarg);
+                status = options[real_index].def->parse(optarg);
             else
-                status = options[real_index].callback("");
+                status = options[real_index].def->parse("");
             if ( !status ) options[real_index].set_cmdline = true;
         }
     }
@@ -663,7 +602,7 @@ ConfigBase::setOptionExternal(const std::string& entryName, const std::string& v
     for ( auto& option : options ) {
         if ( !entryName.compare(option.opt.name) ) {
             if ( option.set_cmdline ) return false;
-            return option.callback(value.c_str());
+            return option.def->parse(value.c_str());
         }
     }
     fprintf(stderr, "ERROR: Unknown configuration entry \"%s\"\n", entryName.c_str());

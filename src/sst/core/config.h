@@ -189,65 +189,47 @@ public:
     /**
        Number of threads requested
     */
-    DEC_OPTION(uint32_t, num_threads, 1);
-
     DECL_OPTION(uint32_t, num_threads, 1, &StandardConfigParsers::from_string<uint32_t>);
 
     /**
        Name of the SDL file to use to genearte the simulation
     */
-    DEC_OPTION_STR(configFile, "NONE");
-
     DECL_OPTION(std::string, configFile, "NONE", &StandardConfigParsers::from_string<std::string>);
 
     /**
        Model options to pass to the SDL file
     */
-    DEC_OPTION_STR(model_options, "");
-
     DECL_OPTION(std::string, model_options, "",
         std::bind(&StandardConfigParsers::append_string, " \"", "\"", std::placeholders::_1, std::placeholders::_2));
 
     /**
        Print SST timing information after the run
     */
-    DEC_OPTION(bool, print_timing, false);
-
     DECL_OPTION(bool, print_timing, false, &StandardConfigParsers::flag_default_true);
 
     /**
        Simulated cycle to stop the simulation at
     */
-    DEC_OPTION_STR(stop_at, "0ns");
-
     DECL_OPTION(std::string, stop_at, "0ns", &StandardConfigParsers::from_string<std::string>);
 
     /**
        Wall clock time (approximiate) in seconds to stop the simulation at
     */
-    DEC_OPTION(uint32_t, exit_after, 0);
-
     DECL_OPTION(uint32_t, exit_after, 0, &StandardConfigParsers::wall_time_to_seconds);
 
     /**
        Partitioner to use for parallel simulations
     */
-    DEC_OPTION_STR(partitioner, "sst.linear");
-
     DECL_OPTION(std::string, partitioner, "sst.linear", &StandardConfigParsers::element_name);
 
     /**
        Wall-clock period at which to print out a "heartbeat" message
     */
-    DEC_OPTION(uint32_t, heartbeat_wall_period, 0);
-
     DECL_OPTION(uint32_t, heartbeat_wall_period, 0, &StandardConfigParsers::wall_time_to_seconds);
 
     /**
        Simulation period at which to print out a "heartbeat" message
     */
-    DEC_OPTION_STR(heartbeat_sim_period, "");
-
     DECL_OPTION(std::string, heartbeat_sim_period, "",
         std::bind(&StandardConfigParsers::check_unitalgebra_store_string, "s, Hz", std::placeholders::_1,
             std::placeholders::_2));
@@ -255,15 +237,11 @@ public:
     /**
        The directory to be used for writting output files
     */
-    DEC_OPTION_STR(output_directory, "");
-
     DECL_OPTION(std::string, output_directory, "", &StandardConfigParsers::from_string<std::string>);
 
     /**
        Prefix to use for the default SST::Output object in core
     */
-    DEC_OPTION_STR(output_core_prefix, "@x SST Core: ");
-
     DECL_OPTION(std::string, output_core_prefix, "@x SST Core: ", &StandardConfigParsers::from_string<std::string>);
 
 
@@ -273,16 +251,12 @@ public:
        File to output python formatted  config graph to (empty string means no
        output)
     */
-    DEC_OPTION_STR(output_config_graph, "");
-
     DECL_OPTION(std::string, output_config_graph, "", &StandardConfigParsers::from_string<std::string>);
 
     /**
        File to output json formatted config graph to (empty string means no
        output)
     */
-    DEC_OPTION_STR(output_json, "");
-
     DECL_OPTION(std::string, output_json, "", &StandardConfigParsers::from_string<std::string>);
 
     /**
@@ -299,11 +273,9 @@ public:
 
         // If parallel_output_ (var) is true, we also need output_partition_
         // to be true.
-        if ( var ) output_partition2_.value1 = true;
+        if ( var ) output_partition_.value1 = true;
         return 0;
     }
-
-    DEC_OPTION(bool, parallel_output, false);
 
     DECL_OPTION(bool, parallel_output, false,
         std::bind(&Config::parse_parallel_output, this, std::placeholders::_1, std::placeholders::_2));
@@ -317,22 +289,16 @@ public:
        output).  Note, this is not a format that can be used as input for simulation
 
     */
-    DEC_OPTION_STR(output_dot, "");
-
     DECL_OPTION(std::string, output_dot, "", &StandardConfigParsers::from_string<std::string>);
 
     /**
        Level of verbosity to use for the dot output.
     */
-    DEC_OPTION(uint32_t, dot_verbosity, 0);
-
     DECL_OPTION(uint32_t, dot_verbosity, 0, &StandardConfigParsers::from_string<uint32_t>);
 
     /**
        Controls whether partition info is output as part of configuration output
      */
-    DEC_OPTION(bool, output_partition, false);
-
     int parse_output_partition(bool& output_part_flag, std::string& file_name, std::string arg)
     {
         if ( arg == "" ) {
@@ -350,8 +316,6 @@ public:
     /**
        File to output component partition info to (empty string means no output)
     */
-    DEC_OPTION_STR(component_partition_file, "");
-
     // DEC_OPTION(component_partition_file, "");
 
     /**** Advanced options ****/
@@ -361,8 +325,6 @@ public:
        simulation.  It is usually best to just leave this at the
        default (1ps)
     */
-    DEC_OPTION_STR(timeBase, "1ps");
-
     static std::string ext_help_timebase();
 
     DECL_OPTION(std::string, timeBase, "1ps",
@@ -372,31 +334,22 @@ public:
 
 
     /**
-       Controls whether graph constuction will be done in parallel.
-       If it is, then the SDL file name is modified to add the rank
-       number to the file name right before the file extension, if
-       parallel_load_mode_multi is true.
-    */
-    DEC_OPTION(bool, parallel_load, false);
+       Parallel loading
 
-    /**
-       If graph constuction will be done in parallel, will use a
-       file per rank if true, and the same file for each rank if
-       false.
+       parallel_load - Controls whether graph constuction will be done
+       in parallel.  If it is, then the SDL file name is modified to
+       add the rank number to the file name right before the file
+       extension, if parallel_load_mode_multi is true.
+
+       parallel-load-mode-multi - If graph constuction will be done in
+       parallel, will use a file per rank if true, and the same file
+       for each rank if false.
     */
-    DEC_OPTION(bool, parallel_load_mode_multi, true);
 
     /**
        Returns the string equivalent for parallel-load: NONE (if
        parallel load is off), SINGLE or MULTI.
     */
-    std::string parallel_load_str() const
-    {
-        if ( !parallel_load_ ) return "NONE";
-        if ( parallel_load_mode_multi_ ) return "MULTI";
-        return "SINGLE";
-    }
-
 
 #ifdef SST_CONFIG_HAVE_MPI
     int parse_parallel_load(bool& parallel_load, bool& parallel_load_mode_multi, std::string arg)
@@ -435,6 +388,13 @@ public:
     }
 #endif
 
+    std::string parallel_load_str() const
+    {
+        if ( !parallel_load_.value1 ) return "NONE";
+        if ( parallel_load_.value2 ) return "MULTI";
+        return "SINGLE";
+    }
+
     DECL_OPTION_PAIR(bool, parallel_load, false, bool, parallel_load_mode_multi, true,
         std::bind(
             &Config::parse_parallel_load, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
@@ -442,16 +402,12 @@ public:
     /**
        TimeVortex implementation to use
     */
-    DEC_OPTION_STR(timeVortex, "sst.timevortex.priority_queue");
-
     DECL_OPTION(
         std::string, timeVortex, "sst.timevortex.priority_queue", &StandardConfigParsers::from_string<std::string>);
 
     /**
        Use links that connect directly to ActivityQueue in receiving thread
     */
-    DEC_OPTION(bool, interthread_links, false);
-
     DECL_OPTION(bool, interthread_links, false, &StandardConfigParsers::flag_default_true);
 
 
@@ -460,15 +416,11 @@ public:
        Controls whether mempool items are cache-aligned
 
     */
-    DEC_OPTION(bool, cache_align_mempools, false);
-
     DECL_OPTION(bool, cache_align_mempools, false, &StandardConfigParsers::flag_default_true);
 #endif
     /**
        File to which core debug information should be written
     */
-    DEC_OPTION_STR(debugFile, "/dev/null");
-
     DECL_OPTION(std::string, debugFile, "/dev/null", &StandardConfigParsers::from_string<std::string>);
 
     /**
@@ -492,8 +444,6 @@ public:
     /**
        Controls whether the Python coverage object will be loaded
      */
-    DEC_OPTION(bool, enable_python_coverage, false);
-
     static std::string ext_help_enable_python_coverage();
 
     DECL_OPTION(bool, enable_python_coverage, false, &StandardConfigParsers::flag_set_true,
@@ -506,8 +456,6 @@ public:
     /**
        Profiling points to turn on
      */
-    DEC_OPTION_STR(enabled_profiling, "");
-
     static std::string ext_help_enable_profiling();
 
     DECL_OPTION(std::string, enabled_profiling, "",
@@ -517,8 +465,6 @@ public:
     /**
        Profiling points to turn on
      */
-    DEC_OPTION_STR(profiling_output, "stdout");
-
     DECL_OPTION(std::string, profiling_output, "stdout", &StandardConfigParsers::from_string<std::string>);
 
 
@@ -529,8 +475,6 @@ public:
        not currently supported because there is not component level
        checkpointing.
     */
-    DEC_OPTION(SimulationRunMode, runMode, SimulationRunMode::BOTH);
-
     static int parseRunMode(SimulationRunMode& val, std::string arg)
     {
         if ( !arg.compare("init") )
@@ -570,15 +514,11 @@ public:
     /**
        Get the InteractiveAction to use for interactive mode
      */
-    DEC_OPTION_STR(interactive_console, "");
-
     DECL_OPTION(std::string, interactive_console, "", &StandardConfigParsers::from_string<std::string>);
 
     /**
        Get the time to start interactive mode
     */
-    DEC_OPTION_STR(interactive_start_time, "");
-
     DECL_OPTION(std::string, interactive_start_time, "",
         std::bind(&StandardConfigParsers::from_string_default<std::string>, std::placeholders::_1,
             std::placeholders::_2, "0"));
@@ -592,8 +532,6 @@ public:
        If no mempools, just reutrn empty string.  This avoids a check
     for mempools in main.cc
     */
-    DEC_OPTION_STR(event_dump_file, "");
-
     DECL_OPTION(std::string, event_dump_file, "", &StandardConfigParsers::from_string<std::string>);
 #endif
 
@@ -601,8 +539,6 @@ public:
        Run simulation initialization stages one rank at a time for
        debug purposes
      */
-    DEC_OPTION(bool, rank_seq_startup, false);
-
     DECL_OPTION(bool, rank_seq_startup, false, &StandardConfigParsers::flag_set_true);
 
 
@@ -626,15 +562,11 @@ public:
        sense of this variable is opposite of the command1 line option
        (--disable-signal-handlers)
     */
-    DEC_OPTION(bool, enable_sig_handling, true);
-
     DECL_OPTION(bool, enable_sig_handling, true, &StandardConfigParsers::flag_set_false);
 
     /**
      * SIGUSR1 handler
      */
-    DEC_OPTION_STR(sigusr1, "sst.rt.status.core");
-
     static std::string ext_help_signals();
 
     DECL_OPTION(std::string, sigusr1, "sst.rt.status.core", &StandardConfigParsers::from_string<std::string>,
@@ -643,16 +575,12 @@ public:
     /**
      * SIGUSR2 handler
      */
-    DEC_OPTION_STR(sigusr2, "sst.rt.status.all");
-
     DECL_OPTION(std::string, sigusr2, "sst.rt.status.all", &StandardConfigParsers::from_string<std::string>,
         Config::ext_help_signals);
 
     /**
      * SIGALRM handler(s)
      */
-    DEC_OPTION_STR(sigalrm, "");
-
     DECL_OPTION(std::string, sigalrm, "",
         std::bind(&StandardConfigParsers::append_string, ";", "", std::placeholders::_1, std::placeholders::_2),
         Config::ext_help_signals);
@@ -663,15 +591,11 @@ public:
     /**
      * Interval at which to create a checkpoint in wall time
      */
-    DEC_OPTION(uint32_t, checkpoint_wall_period, 0);
-
     DECL_OPTION(uint32_t, checkpoint_wall_period, 0, &StandardConfigParsers::wall_time_to_seconds);
 
     /**
      * Interval at which to create a checkpoint in simulated time
      */
-    DEC_OPTION_STR(checkpoint_sim_period, "");
-
     DECL_OPTION(std::string, checkpoint_sim_period, "",
         std::bind(&StandardConfigParsers::check_unitalgebra_store_string, "s, Hz", std::placeholders::_1,
             std::placeholders::_2));
@@ -679,15 +603,11 @@ public:
     /**
      * Returns whether the simulation will begin from a checkpoint (true) or not (false).
      */
-    DEC_OPTION(bool, load_from_checkpoint, false);
-
     DECL_OPTION(bool, load_from_checkpoint, false, &StandardConfigParsers::flag_set_true);
 
     /**
        Prefix for checkpoint filenames and directory
     */
-    DEC_OPTION_STR(checkpoint_prefix, "checkpoint");
-
     static std::string ext_help_checkpoint_prefix();
 
     DECL_OPTION(std::string, checkpoint_prefix, "checkpoint", &StandardConfigParsers::nonempty_string,
@@ -696,8 +616,6 @@ public:
     /**
        Format for checkout filenames
     */
-    DEC_OPTION_STR(checkpoint_name_format, "%p_%n_%t/%p_%n_%t");
-
     static int parse_checkpoint_name_format(std::string& var, std::string arg);
 
     static std::string ext_help_checkpoint_format();
@@ -716,61 +634,67 @@ public:
 
     void serialize_order(SST::Core::Serialization::serializer& ser) override
     {
-        SST_SER(verbose_);
-        SST_SER(configFile_);
-        SST_SER(model_options_);
-        SST_SER(print_timing_);
-        SST_SER(stop_at_);
-        SST_SER(exit_after_);
-        SST_SER(partitioner_);
-        SST_SER(heartbeat_wall_period_);
-        SST_SER(heartbeat_sim_period_);
-        SST_SER(output_directory_);
-        SST_SER(output_core_prefix_);
+        for ( auto* option : options ) {
+            if ( !option.heading ) {
+                option.serialize(ser);
+            }
+        }
+                
+//         SST_SER(verbose_);
+//         SST_SER(configFile_);
+//         SST_SER(model_options_);
+//         SST_SER(print_timing_);
+//         SST_SER(stop_at_);
+//         SST_SER(exit_after_);
+//         SST_SER(partitioner_);
+//         SST_SER(heartbeat_wall_period_);
+//         SST_SER(heartbeat_sim_period_);
+//         SST_SER(output_directory_);
+//         SST_SER(output_core_prefix_);
 
-        SST_SER(output_config_graph_);
-        SST_SER(output_json_);
-        SST_SER(parallel_output_);
+//         SST_SER(output_config_graph_);
+//         SST_SER(output_json_);
+//         SST_SER(parallel_output_);
 
-        SST_SER(output_dot_);
-        SST_SER(dot_verbosity_);
-        SST_SER(component_partition_file_);
-        SST_SER(output_partition_);
+//         SST_SER(output_dot_);
+//         SST_SER(dot_verbosity_);
+//         SST_SER(component_partition_file_);
+//         SST_SER(output_partition_);
 
-        SST_SER(timeBase_);
-        SST_SER(parallel_load_);
-        SST_SER(parallel_load_mode_multi_);
-        SST_SER(timeVortex_);
-        SST_SER(interthread_links_);
-#ifdef USE_MEMPOOL
-        SST_SER(cache_align_mempools_);
-#endif
-        SST_SER(debugFile_);
-        SST_SER(libpath_);
-        SST_SER(addlibpath_);
-#if PY_MINOR_VERSION >= 9
-        SST_SER(enable_python_coverage_);
-#endif
-        SST_SER(enabled_profiling_);
-        SST_SER(profiling_output_);
-        SST_SER(runMode_);
-        SST_SER(interactive_console_);
-        SST_SER(interactive_start_time_);
-#ifdef USE_MEMPOOL
-        SST_SER(event_dump_file_);
-#endif
-        SST_SER(load_from_checkpoint_);
-        SST_SER(checkpoint_wall_period_);
-        SST_SER(checkpoint_sim_period_);
-        SST_SER(checkpoint_prefix_);
-        SST_SER(checkpoint_name_format_);
+//         SST_SER(timeBase_);
+//         SST_SER(parallel_load_);
+//         SST_SER(parallel_load_mode_multi_);
+//         SST_SER(timeVortex_);
+//         SST_SER(interthread_links_);
+// #ifdef USE_MEMPOOL
+//         SST_SER(cache_align_mempools_);
+// #endif
+//         SST_SER(debugFile_);
+//         SST_SER(libpath_);
+//         SST_SER(addlibpath_);
+// #if PY_MINOR_VERSION >= 9
+//         SST_SER(enable_python_coverage_);
+// #endif
+//         SST_SER(enabled_profiling_);
+//         SST_SER(profiling_output_);
+//         SST_SER(runMode_);
+//         SST_SER(interactive_console_);
+//         SST_SER(interactive_start_time_);
+// #ifdef USE_MEMPOOL
+//         SST_SER(event_dump_file_);
+// #endif
+//         SST_SER(load_from_checkpoint_);
+//         SST_SER(checkpoint_wall_period_);
+//         SST_SER(checkpoint_sim_period_);
+//         SST_SER(checkpoint_prefix_);
+//         SST_SER(checkpoint_name_format_);
 
-        SST_SER(enable_sig_handling_);
-        SST_SER(sigusr1_);
-        SST_SER(sigusr2_);
-        SST_SER(sigalrm_);
-        SST_SER(print_env_);
-        SST_SER(no_env_config_);
+//         SST_SER(enable_sig_handling_);
+//         SST_SER(sigusr1_);
+//         SST_SER(sigusr2_);
+//         SST_SER(sigalrm_);
+//         SST_SER(print_env_);
+//         SST_SER(no_env_config_);
     }
     ImplementSerializable(SST::Config);
 
@@ -788,10 +712,6 @@ private:
     // Inserts all the command line options into the underlying data
     // structures
     void insertOptions();
-
-    // Inserts all the command line options into the underlying data
-    // structures
-    void insertOptions2();
 
     bool isFileNameOnly(const std::string& name)
     {
