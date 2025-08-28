@@ -141,6 +141,7 @@ RankSyncSerialSkip::execute(int thread)
 void
 RankSyncSerialSkip::exchange()
 {
+    TraceFunction trace(CALL_INFO_LONG);
 #ifdef SST_CONFIG_HAVE_MPI
     // Maximum number of outstanding requests is 3 times the number
     // of ranks I communicate with (1 recv, 2 sends per rank)
@@ -254,10 +255,13 @@ RankSyncSerialSkip::exchange()
     MPI_Allreduce(&input, &min_time, 1, MPI_UINT64_T, MPI_MIN, MPI_COMM_WORLD);
 
     myNextSyncTime = min_time + max_period.getFactor();
+    trace.output("myNextSyncTime = %llu\n", myNextSyncTime);
 
     int32_t local_signals[3]  = { sig_end_, sig_usr_, sig_alrm_ };
     int32_t global_signals[3] = { 0, 0, 0 };
+    trace.output("Local signals allreduce start\n");
     MPI_Allreduce(&local_signals, &global_signals, 3, MPI_INT32_T, MPI_MAX, MPI_COMM_WORLD);
+    trace.output("Local signals allreduce end\n");
 
     sig_end_  = global_signals[0];
     sig_usr_  = global_signals[1];

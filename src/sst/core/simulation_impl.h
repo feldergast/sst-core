@@ -422,7 +422,21 @@ public:
        between checkpoint and restart and the original rank info
        stored in the checkpoint should be used.
      */
-    RankInfo getRankForLinkOnRestart(int UNUSED(rank), uintptr_t UNUSED(tag)) { return RankInfo(); }
+    // RankInfo getRankForLinkOnRestart(RankInfo UNUSED(rank), uintptr_t UNUSED(tag)) { return RankInfo(0,0); }
+    // RankInfo getRankForLinkOnRestart(RankInfo rank, uintptr_t UNUSED(tag)) { return RankInfo(rank.thread,rank.rank);
+    // }
+    RankInfo getRankForLinkOnRestart(RankInfo rank, uintptr_t UNUSED(tag))
+    {
+        if ( serial_restart_ ) return RankInfo(0, 0);
+        if ( swapped_restart_ ) return RankInfo(rank.thread, rank.rank);
+        return RankInfo(rank.rank, rank.thread);
+    }
+    // RankInfo getRankForLinkOnRestart(RankInfo rank, uintptr_t UNUSED(tag))
+    // {
+    //     uint32_t new_rank = ( rank.rank + num_ranks.rank - 1 ) % num_ranks.rank;
+    //     uint32_t new_thread = ( rank.thread + num_ranks.thread - 1 ) % num_ranks.thread;
+    //     return RankInfo(new_rank,new_thread);
+    // }
 
     void initialize_interactive_console(const std::string& type);
 
@@ -653,6 +667,8 @@ public:
     uint32_t                                   checkpoint_id_       = 0;
     std::string                                checkpoint_prefix_   = "";
     std::string                                globalOutputFileName = "";
+    bool                                       serial_restart_      = false;
+    bool                                       swapped_restart_     = false;
 
     // Config object used by the simulation
     static Config       config;

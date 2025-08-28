@@ -366,6 +366,7 @@ SyncManager::exchangeLinkInfo()
 void
 SyncManager::execute()
 {
+    TraceFunction trace(CALL_INFO_LONG);
     SST_SYNC_PROFILE_START
 
     if ( profile_tools_ ) profile_tools_->syncManagerStart();
@@ -516,16 +517,22 @@ SyncManager::prepareForComplete()
 void
 SyncManager::computeNextInsert(SimTime_t next_checkpoint_time)
 {
-    SimTime_t next_rank_sync   = rankSync_->getNextSyncTime();
+    TraceFunction trace(CALL_INFO_LONG);
+    trace.output("next_checkpoint_time: %llu\n", next_checkpoint_time);
+    SimTime_t next_rank_sync = rankSync_->getNextSyncTime();
+    trace.output("next_rank_sync: %llu\n", next_rank_sync);
     SimTime_t next_thread_sync = threadSync_->getNextSyncTime();
+    trace.output("next_thread_sync: %llu\n", next_thread_sync);
 
     SimTime_t next_sync_time = next_thread_sync;
     next_sync_type_          = THREAD;
 
+    trace.output("1 - next_sync_time = %llu\n", next_sync_time);
     if ( next_rank_sync <= next_thread_sync ) {
         next_sync_type_ = RANK;
         next_sync_time  = next_rank_sync;
     }
+    trace.output("2 - next_sync_time = %llu\n", next_sync_time);
 
     if ( next_checkpoint_time < next_sync_time ) {
         next_sync_time = next_checkpoint_time;
@@ -538,7 +545,7 @@ SyncManager::computeNextInsert(SimTime_t next_checkpoint_time)
             next_sync_type_ = RANK;
         }
     }
-
+    trace.output("3 - next_sync_time = %llu\n", next_sync_time);
     sim_->insertActivity(next_sync_time, this);
 }
 

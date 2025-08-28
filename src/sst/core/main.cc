@@ -846,12 +846,31 @@ main(int argc, char* argv[])
         // Deserialization continues after factory initialization below
 
         ////// Initialize global data //////
-        if ( cfg.num_ranks() != cpt_ranks.rank || cfg.num_threads() != cpt_ranks.thread ) {
-            g_output.fatal(CALL_INFO, 1,
-                "Rank or thread counts do not match checkpoint. "
-                "Checkpoint requires %" PRIu32 " ranks and %" PRIu32 " threads\n",
-                cpt_ranks.rank, cpt_ranks.thread);
+
+        /******** vv Works for regular and N->1 restart vv ***********/
+        // Check to make sure that the checkpoint and restart
+        // parallelism match or if we are restarting with a serial
+        // run.  The N->1 restart is a special case and a step towards
+        // general repartitioned restarts.
+        if ( (cfg.num_ranks() != cpt_ranks.rank || cfg.num_threads() != cpt_ranks.thread) &&
+             !(cfg.num_threads() == 1 && cfg.num_ranks() == 1) ) {
+            // Check to see if we are rank swapped
+            if ( cfg.num_ranks() != cpt_ranks.thread || cfg.num_threads() != cpt_ranks.rank ) {
+                g_output.fatal(CALL_INFO, 1,
+                    "Rank or thread counts do not match checkpoint. "
+                    "Checkpoint requires %" PRIu32 " ranks and %" PRIu32 " threads\n",
+                    cpt_ranks.rank, cpt_ranks.thread);
+            }
         }
+        /******** ^^ Works for regular and N->1 restart ^^ ***********/
+
+        // if ( (cfg.num_ranks() != cpt_ranks.thread || cfg.num_threads() != cpt_ranks.rank ) &&
+        //      !(cfg.num_threads() == 1 && cfg.num_ranks() == 1) ) {
+        //     g_output.fatal(CALL_INFO, 1,
+        //         "Rank or thread counts do not match checkpoint. "
+        //         "Checkpoint requires %" PRIu32 " ranks and %" PRIu32 " threads\n",
+        //         cpt_ranks.thread, cpt_ranks.rank);
+        // }
 
 
     } // if ( restart )

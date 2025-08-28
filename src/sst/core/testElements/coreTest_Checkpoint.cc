@@ -154,15 +154,20 @@ coreTestCheckpoint::finish()
 void
 coreTestCheckpoint::handleEvent(Event* ev)
 {
+    // TraceFunction trace(CALL_INFO_LONG);
+    // trace.output("ev = %p\n", ev);
     coreTestCheckpointEvent* event = static_cast<coreTestCheckpointEvent*>(ev);
 
     if ( event->decCount() ) {
         getSimulationOutput().output("%s, OK to end simulation\n", getName().c_str());
         primaryComponentOKToEndSim();
     }
+    // trace.output("Made it to line %d\n", __LINE__);
     output->verbose(
         CALL_INFO, 1, 0, "%s, bounce %d, t=%" PRIu64 "\n", getName().c_str(), event->getCount(), getCurrentSimCycle());
+    // trace.output("link_right = %p\n", link_right);
     link_right->send(event);
+    // trace.output("stat_eventcount = %p\n", stat_eventcount);
     stat_eventcount->addData(1);
 }
 

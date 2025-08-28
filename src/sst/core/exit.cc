@@ -54,10 +54,8 @@ Exit::refDec(uint32_t thread)
     if ( ref_count_ == 0 ) {
         Simulation_impl::getSimulation()->getSimulationOutput().fatal(CALL_INFO, 1, "ref_count is already 0\n");
     }
-
     --ref_count_;
     --thread_counts_[thread];
-
     if ( single_rank_ && num_threads_ == 1 && ref_count_ == 0 ) {
         end_time_            = Simulation_impl::getSimulation()->getCurrentSimCycle();
         Simulation_impl* sim = Simulation_impl::getSimulation();

@@ -201,5 +201,5 @@ SubCompReceiver::handleEvent(Event* ev)
     numRecv++;
     if ( nMsgReceived ) nMsgReceived->addData(1);
     if ( static_cast<SubCompEvent*>(ev)->last ) primaryComponentOKToEndSim();
-    delete ev;
+    // delete ev;
 }
