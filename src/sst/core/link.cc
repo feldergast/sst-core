@@ -501,7 +501,7 @@ Link::Link() :
     current_time(Simulation_impl::getSimulation()->currentSimCycle),
     type(UNINITIALIZED),
     mode(INIT),
-    tag(-1),
+    tag(type_max<uint32_t>),
     attached_tools(nullptr)
 {}
 
