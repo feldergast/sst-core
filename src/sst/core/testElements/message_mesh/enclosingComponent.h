@@ -154,7 +154,7 @@ private:
     // Measuring statistics per component
     std::vector<Statistic<uint64_t>*> stats_;
 
-    int  my_id_;
+    int  my_id_         = -1;
     int  message_count_ = 0;
     int  mod_           = 1;
     bool verbose_       = true;
@@ -290,8 +290,8 @@ public:
 private:
     std::vector<PortInterface*> ports_;
     std::vector<size_t>         counts_;
-    int                         my_id_;
-    SST::RNG::Random*           rng_ = nullptr;
+    int                         my_id_ = -1;
+    SST::RNG::Random*           rng_   = nullptr;
 
     Statistic<uint64_t>* mcnt_ = nullptr;
 };

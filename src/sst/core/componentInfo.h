@@ -73,7 +73,7 @@ private:
     */
     const ComponentId_t id_;
 
-    ComponentInfo*    parent_info;
+    ComponentInfo*    parent_info = nullptr;
     /**
        Name of the Component/SubComponent.
      */
@@ -91,12 +91,12 @@ private:
        This field is not used for SubComponents loaded with
        loadAnonymousSubComponent().
      */
-    LinkMap* link_map;
+    LinkMap* link_map = nullptr;
 
     /**
        Pointer to the Component created using this ComponentInfo.
      */
-    BaseComponent* component;
+    BaseComponent* component = nullptr;
 
     /**
        SubComponents loaded into the Component/SubComponent.
@@ -111,7 +111,7 @@ private:
 
        This pointer is invalid after simulation wire-up.
     */
-    Params* params;
+    Params* params = nullptr;
 
     TimeConverter defaultTimeBase;
 
@@ -121,11 +121,11 @@ private:
     bool                                                  enabled_all_stats_  = false;
     ConfigStatistic*                                      all_stat_config_    = nullptr;
 
-    uint8_t statLoadLevel;
+    uint8_t statLoadLevel = 0;
 
     std::vector<double> coordinates;
 
-    uint64_t subIDIndex;
+    uint64_t subIDIndex = 0;
 
     // Variables only used by SubComponents
 
@@ -139,14 +139,14 @@ private:
        Index in the slot this SubComponent was loaded into.  This field
        is not used for Components.
      */
-    int slot_num;
+    int slot_num = -1;
 
     /**
        Sharing flags.
 
        Determines whether various data is shared from parent to child.
      */
-    uint64_t share_flags;
+    uint64_t share_flags = 0;
 
     bool sharesPorts() { return (share_flags & SHARE_PORTS) != 0; }
 

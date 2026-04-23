@@ -194,8 +194,15 @@ CheckpointAction::createCheckpoint(Simulation_impl* sim)
 
     if ( rank_.thread == 0 ) checkpoint_id++;
 
+    // Set the trace file for the checkpoint
+    std::string trace_filename =
+        directory + "/" + basename + "_" + std::to_string(rank_.rank) + "_" + std::to_string(rank_.thread) + ".trc";
+    Core::Serialization::pvt::ser_trace_fp = fopen(trace_filename.c_str(), "w");
+
     // Write out the checkpoints for the partitions
     sim->checkpoint(directory + "/" + filename);
+
+    fclose(Core::Serialization::pvt::ser_trace_fp);
 
     // Write out the registry.  Rank 0 thread 0 will write the global
     // state and its registry, then each thread will take a turn

@@ -342,6 +342,39 @@ class serialize<T*>
     }
 };
 
+////// TEMP //////
+inline thread_local int   ser_depth    = 0;
+inline thread_local FILE* ser_trace_fp = nullptr;
+
+// For fundamental types, returns the value of the variable.  For non-fundamental types, returns the demangled class
+// name
+template <class T>
+std::string
+get_value_str(T& val)
+{
+    std::string value_str;
+    if constexpr ( std::is_fundamental_v<T> ) {
+        return std::to_string(val);
+    }
+    else {
+        return ObjectMap::demangle_name(typeid(T).name());
+    }
+}
+
+inline std::string
+get_value_str(std::string& val)
+{
+    return val;
+}
+
+inline std::string
+get_value_str(bool& val)
+{
+    return val ? "true" : "false";
+}
+
+//// END TEMP ////
+
 // All serialization must go through this function to ensure
 // everything works correctly
 //
@@ -370,6 +403,9 @@ sst_ser_object(serializer& ser, TREF&& obj, ser_opt_t options, const char* name)
         }
     }
     else if constexpr ( !std::is_pointer_v<T> ) {
+        if ( ser_trace_fp )
+            fprintf(ser_trace_fp, "%s%s: %s\n", std::string(ser_depth, ' ').c_str(), name, get_value_str(obj).c_str());
+        ser_depth++;
         // as_ptr is only valid for non-pointers
         if ( SerOption::is_set(options, SerOption::as_ptr) ) {
             pvt::serialize<T>().serialize_and_track_pointer(obj, ser, options);
@@ -377,10 +413,15 @@ sst_ser_object(serializer& ser, TREF&& obj, ser_opt_t options, const char* name)
         else {
             pvt::serialize<T>()(obj, ser, options);
         }
+        ser_depth--;
     }
     else {
+        if ( ser_trace_fp )
+            fprintf(ser_trace_fp, "%s%s: %s\n", std::string(ser_depth, ' ').c_str(), name, get_value_str(obj).c_str());
+        ser_depth++;
         // For pointer types, just call serialize
         pvt::serialize<T>()(obj, ser, options);
+        ser_depth--;
     }
 }
 

@@ -215,10 +215,10 @@ ComponentInfo::serialize_order(SST::Core::Serialization::serializer& ser)
 
     // Serialize all my data except the component and link_map
 
-    SST_SER(const_cast<ComponentId_t&>(id_));
+    SST_SER_NAME(const_cast<ComponentId_t&>(id_), "id_");
     SST_SER(parent_info);
-    SST_SER(const_cast<std::string&>(name));
-    SST_SER(const_cast<std::string&>(type));
+    SST_SER_NAME(const_cast<std::string&>(name), "name");
+    SST_SER_NAME(const_cast<std::string&>(type), "type");
 
     // Not used after construction, no need to serialize
     // SST_SER(params);
@@ -227,7 +227,7 @@ ComponentInfo::serialize_order(SST::Core::Serialization::serializer& ser)
 
     // SST_SER(coordinates);
     SST_SER(subIDIndex);
-    SST_SER(const_cast<std::string&>(slot_name));
+    SST_SER_NAME(const_cast<std::string&>(slot_name), "slot_name");
     SST_SER(slot_num);
     SST_SER(share_flags);
 
@@ -239,19 +239,19 @@ ComponentInfo::serialize_order(SST::Core::Serialization::serializer& ser)
         std::map<std::string, StatisticId_t>     enabled_stat_names;
         bool                                     is_null = true;
 
-        SST_SER(is_null);
+        SST_SER_NAME(is_null, "is_null_stat_configs");
         if ( !is_null ) {
             SST_SER(stat_configs);
             stat_configs_ = new std::map<StatisticId_t, ConfigStatistic>(stat_configs);
         }
 
-        SST_SER(is_null);
+        SST_SER_NAME(is_null, "is_null_all_stat_config");
         if ( !is_null ) {
             SST_SER(all_stat_config);
             all_stat_config_ = new ConfigStatistic(all_stat_config);
         }
 
-        SST_SER(is_null);
+        SST_SER_NAME(is_null, "is_null_stat_names");
         if ( !is_null ) {
             SST_SER(enabled_stat_names);
             enabled_stat_names_ = new std::map<std::string, StatisticId_t>(enabled_stat_names);
@@ -259,15 +259,15 @@ ComponentInfo::serialize_order(SST::Core::Serialization::serializer& ser)
     }
     else {
         bool is_null = stat_configs_ == nullptr;
-        SST_SER(is_null);
+        SST_SER_NAME(is_null, "is_null_stat_configs");
         if ( !is_null ) SST_SER(*stat_configs_);
 
         is_null = all_stat_config_ == nullptr;
-        SST_SER(is_null);
+        SST_SER_NAME(is_null, "is_null_all_stat_config");
         if ( !is_null ) SST_SER(*all_stat_config_);
 
         is_null = enabled_stat_names_ == nullptr;
-        SST_SER(is_null);
+        SST_SER_NAME(is_null, "is_null_stat_names");
         if ( !is_null ) SST_SER(*enabled_stat_names_);
     }
 
