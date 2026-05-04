@@ -203,6 +203,7 @@ CheckpointAction::createCheckpoint(Simulation_impl* sim)
     sim->checkpoint(directory + "/" + filename);
 
     fclose(Core::Serialization::pvt::ser_trace_fp);
+    Core::Serialization::pvt::ser_trace_fp = nullptr;
 
     // Write out the registry.  Rank 0 thread 0 will write the global
     // state and its registry, then each thread will take a turn

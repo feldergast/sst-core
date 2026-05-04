@@ -403,8 +403,9 @@ sst_ser_object(serializer& ser, TREF&& obj, ser_opt_t options, const char* name)
         }
     }
     else if constexpr ( !std::is_pointer_v<T> ) {
-        if ( ser_trace_fp )
+        if ( ser_trace_fp ) {
             fprintf(ser_trace_fp, "%s%s: %s\n", std::string(ser_depth, ' ').c_str(), name, get_value_str(obj).c_str());
+        }
         ser_depth++;
         // as_ptr is only valid for non-pointers
         if ( SerOption::is_set(options, SerOption::as_ptr) ) {
@@ -416,8 +417,9 @@ sst_ser_object(serializer& ser, TREF&& obj, ser_opt_t options, const char* name)
         ser_depth--;
     }
     else {
-        if ( ser_trace_fp )
-            fprintf(ser_trace_fp, "%s%s: %s\n", std::string(ser_depth, ' ').c_str(), name, get_value_str(obj).c_str());
+        if ( ser_trace_fp && ser.mode() == serializer::PACK ) {
+            fprintf(ser_trace_fp, "%s%s: %s\n", std::string(ser_depth, ' ').c_str(), name, get_value_str(*obj).c_str());
+        }
         ser_depth++;
         // For pointer types, just call serialize
         pvt::serialize<T>()(obj, ser, options);
