@@ -2201,6 +2201,14 @@ Simulation_impl::restart(ConfigGraph* graph)
         // This is a regular restart (same parallelism as checkpoint)
         std::ifstream fs_blob(blob_filenames[0], std::ios::binary);
 
+        // Set up the trace file for the restart
+
+        // Need to generate the name, which will use the same base name as the binary file with _unpack appened and will
+        // have a .trc extension
+        std::string restart_trace_filename = blob_filenames[0].substr(0, blob_filenames[0].rfind('.'));
+        restart_trace_filename += "_unpack.trc";
+        Core::Serialization::pvt::ser_trace_fp = fopen(restart_trace_filename.c_str(), "w");
+
         /* Now get the global blob */
         fs_blob.read(reinterpret_cast<char*>(&size), sizeof(size));
         buffer.resize(size);
@@ -2241,6 +2249,7 @@ Simulation_impl::restart(ConfigGraph* graph)
             compInfoMap.insert(compInfo);
         }
         fs_blob.close();
+        fclose(Core::Serialization::pvt::ser_trace_fp);
     }
     else {
         // This is a parallel checkpoint restarted as a serial job

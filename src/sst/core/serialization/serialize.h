@@ -88,7 +88,7 @@ namespace Core::Serialization {
 namespace pvt {
 
 template <typename T>
-void sst_ser_object(serializer& ser, T&& obj, ser_opt_t options, const char* name);
+void sst_ser_object(serializer& ser, T&& obj, ser_opt_t options, const char* name, const char* func);
 
 // Proxy struct which represents a bit reference wrapper similar to std::reference_wrapper.
 // This proxy is needed in order for us to partially specialize serialize_impl for the
@@ -181,7 +181,7 @@ template <class T>
 class serialize
 {
     template <class U>
-    friend void sst_ser_object(serializer& ser, U&& obj, ser_opt_t options, const char* name);
+    friend void sst_ser_object(serializer& ser, U&& obj, ser_opt_t options, const char* name, const char* func);
 
     void operator()(T& t, serializer& ser, ser_opt_t options) { return serialize_impl<T>()(t, ser, options); }
 
@@ -249,7 +249,7 @@ template <class T>
 class serialize<T*>
 {
     template <class U>
-    friend void sst_ser_object(serializer& ser, U&& obj, ser_opt_t options, const char* name);
+    friend void sst_ser_object(serializer& ser, U&& obj, ser_opt_t options, const char* name, const char* func);
     void        operator()(T*& t, serializer& ser, ser_opt_t options)
     {
         // We are a pointer, need to see if tracking is turned on
@@ -343,11 +343,18 @@ class serialize<T*>
 };
 
 ////// TEMP //////
-inline thread_local int   ser_depth    = 0;
-inline thread_local FILE* ser_trace_fp = nullptr;
+inline thread_local int                      ser_depth    = 0;
+inline thread_local FILE*                    ser_trace_fp = nullptr;
+inline thread_local std::vector<std::string> function_stack;
 
 // For fundamental types, returns the value of the variable.  For non-fundamental types, returns the demangled class
 // name
+template <class T>
+inline constexpr bool is_treated_as_fundamental_v = std::is_fundamental_v<T>;
+
+template <>
+inline constexpr bool is_treated_as_fundamental_v<std::string> = true;
+
 template <class T>
 std::string
 get_value_str(T& val)
@@ -373,6 +380,17 @@ get_value_str(bool& val)
     return val ? "true" : "false";
 }
 
+inline std::string
+clean_function(const char* func)
+{
+    std::string ret(func);
+    size_t      first = ret.find(' ');
+    if ( first == ret.npos ) return ret;
+    size_t last = ret.find('(') - first;
+    if ( last == ret.npos ) return ret;
+    return ret.substr(first + 1, last - 1);
+}
+
 //// END TEMP ////
 
 // All serialization must go through this function to ensure
@@ -383,7 +401,7 @@ get_value_str(bool& val)
 // matches serialization functions which only take lvalue references.
 template <class TREF>
 void
-sst_ser_object(serializer& ser, TREF&& obj, ser_opt_t options, const char* name)
+sst_ser_object(serializer& ser, TREF&& obj, ser_opt_t options, const char* name, const char* func)
 {
     // TREF is an lvalue reference when obj argument is an lvalue reference, so we remove the reference
     using T = std::remove_reference_t<TREF>;
@@ -403,10 +421,18 @@ sst_ser_object(serializer& ser, TREF&& obj, ser_opt_t options, const char* name)
         }
     }
     else if constexpr ( !std::is_pointer_v<T> ) {
-        if ( ser_trace_fp ) {
-            fprintf(ser_trace_fp, "%s%s: %s\n", std::string(ser_depth, ' ').c_str(), name, get_value_str(obj).c_str());
+        if ( ser_trace_fp && ser.mode() != serializer::SIZER ) {
+            std::string function(func);
+            if constexpr ( !is_treated_as_fundamental_v<T> ) {
+                // fprintf(ser_trace_fp, "%sEnter %s: %s (%s)\n", std::string(ser_depth*2, ' ').c_str(), name,
+                // get_value_str(obj).c_str(), clean_function(func).c_str());
+                fprintf(ser_trace_fp, "%sEnter %s (%s)\n", std::string(ser_depth * 2, ' ').c_str(), name,
+                    clean_function(func).c_str());
+                fprintf(ser_trace_fp, "%s[type = %s]\n", std::string(ser_depth * 2, ' ').c_str(),
+                    get_value_str(obj).c_str());
+                ser_depth++;
+            }
         }
-        ser_depth++;
         // as_ptr is only valid for non-pointers
         if ( SerOption::is_set(options, SerOption::as_ptr) ) {
             pvt::serialize<T>().serialize_and_track_pointer(obj, ser, options);
@@ -414,16 +440,47 @@ sst_ser_object(serializer& ser, TREF&& obj, ser_opt_t options, const char* name)
         else {
             pvt::serialize<T>()(obj, ser, options);
         }
-        ser_depth--;
+        if ( ser_trace_fp && ser.mode() != serializer::SIZER ) {
+            if constexpr ( !is_treated_as_fundamental_v<T> ) {
+                ser_depth--;
+                // fprintf(ser_trace_fp, "%sExit %s: %s (%s)\n", std::string(ser_depth*2, ' ').c_str(), name,
+                // get_value_str(obj).c_str(), clean_function(func).c_str());
+                fprintf(ser_trace_fp, "%sExit %s (%s)\n", std::string(ser_depth * 2, ' ').c_str(), name,
+                    clean_function(func).c_str());
+            }
+            else {
+                fprintf(ser_trace_fp, "%s%s: %s (%s)\n", std::string(ser_depth * 2, ' ').c_str(), name,
+                    get_value_str(obj).c_str(), clean_function(func).c_str());
+            }
+        }
     }
     else {
-        if ( ser_trace_fp && ser.mode() == serializer::PACK ) {
-            fprintf(ser_trace_fp, "%s%s: %s\n", std::string(ser_depth, ' ').c_str(), name, get_value_str(*obj).c_str());
+        if ( ser_trace_fp && ser.mode() != serializer::SIZER ) {
+            if constexpr ( !is_treated_as_fundamental_v<T> ) {
+                // fprintf(ser_trace_fp, "%sEnter %s: %s (%s)\n", std::string(ser_depth, ' ').c_str(), name,
+                // get_value_str(*obj).c_str(), clean_function(func).c_str());
+                fprintf(ser_trace_fp, "%sEnter %s (%s)\n", std::string(ser_depth * 2, ' ').c_str(), name,
+                    clean_function(func).c_str());
+                fprintf(ser_trace_fp, "%s[type = %s]\n", std::string(ser_depth * 2, ' ').c_str(),
+                    get_value_str(*obj).c_str());
+            }
+            ser_depth++;
         }
-        ser_depth++;
         // For pointer types, just call serialize
         pvt::serialize<T>()(obj, ser, options);
-        ser_depth--;
+        if ( ser_trace_fp && ser.mode() != serializer::SIZER ) {
+            if constexpr ( !is_treated_as_fundamental_v<T> ) {
+                // fprintf(ser_trace_fp, "%sExit %s: %s (%s)\n", std::string(ser_depth*2, ' ').c_str(), name,
+                // get_value_str(*obj).c_str(), clean_function(func).c_str());
+                fprintf(ser_trace_fp, "%sExit %s (%s)\n", std::string(ser_depth * 2, ' ').c_str(), name,
+                    clean_function(func).c_str());
+            }
+            else {
+                fprintf(ser_trace_fp, "%s%s: %s (%s)\n", std::string(ser_depth * 2, ' ').c_str(), name,
+                    get_value_str(*obj).c_Str(), clean_function(func).c_str());
+            }
+            ser_depth--;
+        }
     }
 }
 
@@ -433,11 +490,11 @@ sst_ser_object(serializer& ser, TREF&& obj, ser_opt_t options, const char* name)
 // Serialization macros for checkpoint/debug serialization
 #define SST_SER(obj, ...)                          \
     SST::Core::Serialization::pvt::sst_ser_object( \
-        ser, (obj), SST::Core::Serialization::pvt::sst_ser_or_helper(__VA_ARGS__), #obj)
+        ser, (obj), SST::Core::Serialization::pvt::sst_ser_or_helper(__VA_ARGS__), #obj, __PRETTY_FUNCTION__)
 
 #define SST_SER_NAME(obj, name, ...)               \
     SST::Core::Serialization::pvt::sst_ser_object( \
-        ser, (obj), SST::Core::Serialization::pvt::sst_ser_or_helper(__VA_ARGS__), name)
+        ser, (obj), SST::Core::Serialization::pvt::sst_ser_or_helper(__VA_ARGS__), name, __PRETTY_FUNCTION__)
 
 namespace pvt {
 template <typename... Args>

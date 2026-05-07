@@ -65,7 +65,16 @@ class serialize_impl<T,
 
         default:
             // Serialize each element in a std::tuple or std::pair
-            std::apply([&](auto&... e) { ((SST_SER(e, opt)), ...); }, t);
+            // The else condition will handle pair as well, but doing something specific for pair will make
+            // serialization traces more readable
+            if constexpr ( is_same_type_template_v<T, std::pair> ) {
+                // Serialize first and second members of std::pair
+                SST_SER_NAME(t.first, "first", opt);
+                SST_SER_NAME(t.second, "second", opt);
+            }
+            else {
+                std::apply([&](auto&... e) { ((SST_SER(e, opt)), ...); }, t);
+            }
             break;
         }
     }

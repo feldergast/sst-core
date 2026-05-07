@@ -143,26 +143,28 @@ class serialize_impl<OBJ, std::enable_if_t<is_insertable_v<OBJ>>>
         const ser_opt_t UNUSED(opts) =
             SerOption::is_set(options, SerOption::as_ptr_elem) ? SerOption::as_ptr : SerOption::none;
 
-        switch ( const auto mode = ser.mode() ) {
+        // switch ( const auto mode = ser.mode() ) {
+        switch ( ser.mode() ) {
         case serializer::SIZER:
         case serializer::PACK:
         {
             size_t size = get_size(obj);
 
-            if ( mode == serializer::PACK )
-                ser.pack(size);
-            else
-                ser.size(size);
+            // if ( mode == serializer::PACK )
+            //     ser.pack(size);
+            // else
+            //     ser.size(size);
+            SST_SER(size);
 
             if constexpr ( is_vector_bool_v<OBJ> ) {
                 // For std::vector<bool>, iterate over bool values instead of references to elements.
-                for ( bool e : obj )
-                    SST_SER(e); // as_ptr_elem not valid for bool
+                for ( bool element : obj )
+                    SST_SER(element); // as_ptr_elem not valid for bool
             }
             else {
                 // Iterate over references to elements, casting away any const in keys
                 for ( auto& e : obj )
-                    SST_SER(const_cast<value_type&>(reinterpret_cast<const value_type&>(e)), opts);
+                    SST_SER_NAME(const_cast<value_type&>(reinterpret_cast<const value_type&>(e)), "element", opts);
             }
             break;
         }
@@ -171,7 +173,8 @@ class serialize_impl<OBJ, std::enable_if_t<is_insertable_v<OBJ>>>
         {
             // Get the total size of the container
             size_t size {};
-            ser.unpack(size);
+            // ser.unpack(size);
+            SST_SER(size);
 
             // Erase the container
             obj.clear();
