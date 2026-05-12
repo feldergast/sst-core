@@ -245,102 +245,6 @@ class serialize
     }
 };
 
-template <class T>
-class serialize<T*>
-{
-    template <class U>
-    friend void sst_ser_object(serializer& ser, U&& obj, ser_opt_t options, const char* name, const char* func);
-    void        operator()(T*& t, serializer& ser, ser_opt_t options)
-    {
-        // We are a pointer, need to see if tracking is turned on
-        if ( !ser.is_pointer_tracking_enabled() ) {
-            switch ( ser.mode() ) {
-            case serializer::UNPACK:
-                t = nullptr; // Nullify the pointer in case it was null
-                [[fallthrough]];
-            default:
-            {
-                // We will always get/put a bool to tell whether or not this is nullptr.
-                bool nonnull = t != nullptr;
-                ser.primitive(nonnull);
-
-                // If not nullptr, serialize the object
-                if ( nonnull ) serialize_impl<T*>()(t, ser, options);
-                break;
-            }
-            case serializer::MAP:
-                break; // If this version of serialize gets called in mapping mode, there is nothing to do
-            }
-            return;
-        }
-
-        uintptr_t ptr = reinterpret_cast<uintptr_t>(t);
-        if ( nullptr == t ) ptr = 0;
-
-        switch ( ser.mode() ) {
-        case serializer::SIZER:
-            // Always put the pointer in
-            ser.size(ptr);
-
-            // If this is a nullptr, then we are done
-            if ( 0 == ptr ) return;
-
-            // If we haven't seen this yet, also need to serialize the
-            // object
-            if ( !ser.sizer().check_pointer_sizer(ptr) ) {
-                serialize_impl<T*>()(t, ser, options);
-            }
-            break;
-        case serializer::PACK:
-            // Always put the pointer in
-            ser.pack(ptr);
-
-            // Nothing else to do if this is nullptr
-            if ( 0 == ptr ) return;
-
-            if ( !ser.packer().check_pointer_pack(ptr) ) {
-                serialize_impl<T*>()(t, ser, options);
-            }
-            break;
-        case serializer::UNPACK:
-        {
-            // Get the ptr and check to see if we've already deserialized
-            uintptr_t ptr_stored;
-            ser.unpack(ptr_stored);
-
-            // Check to see if this was a nullptr
-            if ( 0 == ptr_stored ) {
-                t = nullptr;
-                return;
-            }
-
-            uintptr_t real_ptr = ser.unpacker().check_pointer_unpack(ptr_stored);
-            if ( real_ptr ) {
-                // Already deserialized, so just return pointer
-                t = reinterpret_cast<T*>(real_ptr);
-            }
-            else {
-                serialize_impl<T*>()(t, ser, options);
-                ser.unpacker().report_real_pointer(ptr_stored, reinterpret_cast<uintptr_t>(t));
-            }
-            break;
-        }
-        case serializer::MAP:
-        {
-            ObjectMap* map = ser.mapper().check_pointer_map(reinterpret_cast<uintptr_t>(t));
-            if ( map != nullptr ) {
-                // If we've already seen this object, just add the
-                // existing ObjectMap to the parent.
-                ser.mapper().map_existing_object(ser.getMapName(), map);
-            }
-            else {
-                serialize_impl<T*>()(t, ser, options);
-            }
-            break;
-        }
-        }
-    }
-};
 
 ////// TEMP //////
 inline thread_local int                      ser_depth    = 0;
@@ -392,6 +296,117 @@ clean_function(const char* func)
 }
 
 //// END TEMP ////
+
+template <class T>
+class serialize<T*>
+{
+    template <class U>
+    friend void sst_ser_object(serializer& ser, U&& obj, ser_opt_t options, const char* name, const char* func);
+    void        operator()(T*& t, serializer& ser, ser_opt_t options)
+    {
+        // We are a pointer, need to see if tracking is turned on
+        if ( !ser.is_pointer_tracking_enabled() ) {
+            switch ( ser.mode() ) {
+            case serializer::UNPACK:
+                t = nullptr; // Nullify the pointer in case it was null
+                [[fallthrough]];
+            default:
+            {
+                // We will always get/put a bool to tell whether or not this is nullptr.
+                bool nonnull = t != nullptr;
+                ser.primitive(nonnull);
+
+                // If not nullptr, serialize the object
+                if ( nonnull ) serialize_impl<T*>()(t, ser, options);
+                break;
+            }
+            case serializer::MAP:
+                break; // If this version of serialize gets called in mapping mode, there is nothing to do
+            }
+            return;
+        }
+
+        uintptr_t ptr = reinterpret_cast<uintptr_t>(t);
+        if ( nullptr == t ) ptr = 0;
+
+        switch ( ser.mode() ) {
+        case serializer::SIZER:
+            // Always put the pointer in
+            ser.size(ptr);
+
+            // If this is a nullptr, then we are done
+            if ( 0 == ptr ) return;
+
+            // If we haven't seen this yet, also need to serialize the
+            // object
+            if ( !ser.sizer().check_pointer_sizer(ptr) ) {
+                serialize_impl<T*>()(t, ser, options);
+            }
+            break;
+        case serializer::PACK:
+            // Always put the pointer in
+            ser.pack(ptr);
+            if ( ser_trace_fp ) {
+                fprintf(ser_trace_fp, "%s[pointer tag = %" PRIxPTR "]\n", std::string(ser_depth * 2, ' ').c_str(), ptr);
+            }
+
+            // Nothing else to do if this is nullptr
+            if ( 0 == ptr ) return;
+
+            if ( !ser.packer().check_pointer_pack(ptr) ) {
+                serialize_impl<T*>()(t, ser, options);
+            }
+            else if ( ser_trace_fp ) {
+                fprintf(ser_trace_fp, "%s[Matching Tag]\n", std::string(ser_depth * 2, ' ').c_str());
+            }
+
+            break;
+        case serializer::UNPACK:
+        {
+            // Get the ptr and check to see if we've already deserialized
+            uintptr_t ptr_stored;
+            ser.unpack(ptr_stored);
+            if ( ser_trace_fp ) {
+                fprintf(ser_trace_fp, "%s[pointer tag = %" PRIxPTR "]\n", std::string(ser_depth * 2, ' ').c_str(),
+                    ptr_stored);
+            }
+
+            // Check to see if this was a nullptr
+            if ( 0 == ptr_stored ) {
+                t = nullptr;
+                return;
+            }
+
+            uintptr_t real_ptr = ser.unpacker().check_pointer_unpack(ptr_stored);
+            if ( real_ptr ) {
+                // Already deserialized, so just return pointer
+                if ( ser_trace_fp ) {
+                    fprintf(ser_trace_fp, "%s[Matching Tag]\n", std::string(ser_depth * 2, ' ').c_str());
+                }
+                t = reinterpret_cast<T*>(real_ptr);
+            }
+            else {
+                serialize_impl<T*>()(t, ser, options);
+                ser.unpacker().report_real_pointer(ptr_stored, reinterpret_cast<uintptr_t>(t));
+            }
+            break;
+        }
+        case serializer::MAP:
+        {
+            ObjectMap* map = ser.mapper().check_pointer_map(reinterpret_cast<uintptr_t>(t));
+            if ( map != nullptr ) {
+                // If we've already seen this object, just add the
+                // existing ObjectMap to the parent.
+                ser.mapper().map_existing_object(ser.getMapName(), map);
+            }
+            else {
+                serialize_impl<T*>()(t, ser, options);
+            }
+            break;
+        }
+        }
+    }
+};
 
 // All serialization must go through this function to ensure
 // everything works correctly
