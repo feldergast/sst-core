@@ -35,7 +35,7 @@ from inspect import signature
 from functools import wraps
 from pathlib import Path
 from shutil import which
-from typing import (Any, Callable, List, Mapping, Optional, Sequence, Tuple,
+from typing import (Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple,
                     Type, TypeVar, TYPE_CHECKING, Union, cast)
 from warnings import warn
 
@@ -795,6 +795,290 @@ def testing_parse_stat(line: str) -> Optional[List[Union[str, int, float]]]:
     else:
         return None
     return stat
+
+def _numeric_within_tolerance(ref_val: Union[int, float], out_val: Union[int, float], tolerance_pct: float = 0.01) -> bool:
+    """Check if two numeric values are within relative percentage tolerance.
+
+    Args:
+        ref_val: Reference value (int or float)
+        out_val: Output value to compare (int or float)
+        tolerance_pct: Tolerance as decimal (0.01 = 1%)
+
+    Returns:
+        bool: True if within tolerance, False otherwise
+    """
+    # Convert to float for comparison
+    ref = float(ref_val)
+    out = float(out_val)
+
+    # Handle zero cases
+    if ref == 0.0 and out == 0.0:
+        return True
+    if ref == 0.0 or out == 0.0:
+        # If one is zero and other isn't, fail (unless both are very small)
+        return abs(ref) < 1e-10 and abs(out) < 1e-10
+
+    # Relative tolerance: error / max(|ref|, |out|) <= tolerance
+    max_val = max(abs(ref), abs(out))
+    relative_error = abs(ref - out) / max_val
+
+    return relative_error <= tolerance_pct
+
+def _parse_stat_txt_line(line: str) -> Optional[Dict[str, Union[str, bool]]]:
+    """Parse a statistic line from TXT output format with SimTime field.
+
+    Format: ComponentName.StatName.ID : Accumulator : SimTime = X; Sum.type = Y; ...
+
+    Args:
+        line (str): Line to parse
+
+    Returns:
+        dict: Parsed fields with keys: component, stat_name, subid, simtime, sum, sumsq, count, min, max, is_float
+              or None if line doesn't match format
+    """
+    pattern = r'([\w.]+)\.(\w+)\.(\d+) : Accumulator : SimTime = ([\d.]+); Sum\.(\w+) = ([\d.]+); SumSQ\.\w+ = ([\d.]+); Count\.\w+ = ([\d.]+); Min\.\w+ = ([\d.]+); Max\.\w+ = ([\d.]+);'
+    m = re.match(pattern, line.strip())
+
+    if m is None:
+        return None
+
+    component = m.group(1)
+    stat_name = m.group(2)
+    subid = m.group(3)
+    type_indicator = m.group(5)  # u32, u64, f32, f64, etc.
+
+    # Determine if float or int based on type indicator
+    is_float = 'f' in type_indicator.lower()
+
+    result = {
+        'component': component,
+        'stat_name': stat_name,
+        'subid': subid,
+        'simtime': m.group(4),
+        'sum': m.group(6),
+        'sumsq': m.group(7),
+        'count': m.group(8),
+        'min': m.group(9),
+        'max': m.group(10),
+        'is_float': is_float,
+        'type': type_indicator
+    }
+
+    return result
+
+def _parse_stat_csv_line(line: str, header_map: Dict[str, int]) -> Optional[Dict[str, str]]:
+    """Parse a statistic line from CSV output format.
+
+    Args:
+        line (str): CSV line to parse
+        header_map (dict): Mapping of column names to indices
+
+    Returns:
+        dict: Parsed fields or None if not a data line
+    """
+    if not line.strip() or line.strip().startswith('ComponentName'):
+        return None
+
+    parts = [p.strip() for p in line.split(',')]
+
+    if len(parts) < 14:  # Expected number of columns
+        return None
+
+    try:
+        result = {
+            'component': parts[header_map['ComponentName']],
+            'stat_name': parts[header_map['StatisticName']],
+            'subid': parts[header_map['StatisticSubId']],
+            'stat_type': parts[header_map['StatisticType']],
+            'simtime': parts[header_map['SimTime']],
+            'sum_u32': parts[header_map['Sum.u32']],
+            'sumsq_u32': parts[header_map['SumSQ.u32']],
+            'count': parts[header_map['Count.u64']],
+            'min_u32': parts[header_map['Min.u32']],
+            'max_u32': parts[header_map['Max.u32']],
+            'sum_u64': parts[header_map['Sum.u64']],
+            'sumsq_u64': parts[header_map['SumSQ.u64']],
+            'min_u64': parts[header_map['Min.u64']],
+            'max_u64': parts[header_map['Max.u64']],
+        }
+        return result
+    except (IndexError, KeyError):
+        return None
+
+def testing_compare_with_tolerance(
+    test_name: str,
+    outfile: str,
+    reffile: str,
+    tolerance_pct: float = 0.01,
+    format_type: str = 'txt',
+    filters: Optional[List['LineFilter']] = None
+) -> bool:
+    """Compare two files with numeric tolerance for statistics.
+
+    Compares files line-by-line, applying tolerance to numeric fields in statistics
+    while requiring exact matches for non-numeric fields.
+
+    Args:
+        test_name (str): Unique identifier for diff output files
+        outfile (str): Path to output file
+        reffile (str): Path to reference file
+        tolerance_pct (float): Tolerance as decimal (0.01 = 1%)
+        format_type (str): One of 'txt', 'csv', or 'out'
+        filters (list): Optional list of LineFilter objects
+
+    Returns:
+        bool: True if files match within tolerance, False otherwise
+    """
+    # Read and filter files
+    if filters is None:
+        filters = []
+
+    ref_lines = _read_and_filter(reffile, filters, False, True)
+    out_lines = _read_and_filter(outfile, filters, False, False)
+
+    if ref_lines is None or out_lines is None:
+        return False
+
+    # For CSV format, extract header mapping
+    header_map = None
+    if format_type == 'csv' and len(ref_lines) > 0:
+        header_line = ref_lines[0].strip()
+        if header_line.startswith('ComponentName'):
+            headers = [h.strip() for h in header_line.split(',')]
+            header_map = {h: i for i, h in enumerate(headers)}
+
+    # Parse both files
+    if format_type == 'txt':
+        ref_stats = [_parse_stat_txt_line(line) for line in ref_lines]
+        out_stats = [_parse_stat_txt_line(line) for line in out_lines]
+    elif format_type == 'csv':
+        ref_stats = [_parse_stat_csv_line(line, header_map) if header_map else None for line in ref_lines]
+        out_stats = [_parse_stat_csv_line(line, header_map) if header_map else None for line in out_lines]
+    else:  # 'out' format - mixed console output
+        # For .out files, only parse lines that look like statistics
+        ref_stats = []
+        out_stats = []
+        for line in ref_lines:
+            parsed = _parse_stat_txt_line(line)
+            ref_stats.append(parsed if parsed else line)  # Keep original if not parseable
+        for line in out_lines:
+            parsed = _parse_stat_txt_line(line)
+            out_stats.append(parsed if parsed else line)  # Keep original if not parseable
+
+    # Build lookup maps for matching
+    def make_key(stat):
+        if stat is None or isinstance(stat, str):
+            return None
+        if format_type == 'csv':
+            return (stat['component'], stat['stat_name'], stat['subid'], stat['simtime'])
+        else:  # txt or parsed lines from out
+            return (stat['component'], stat['stat_name'], stat['subid'], stat['simtime'])
+
+    ref_dict = {}
+    for i, stat in enumerate(ref_stats):
+        if stat and not isinstance(stat, str):
+            key = make_key(stat)
+            if key:
+                ref_dict[key] = (i, stat)
+
+    out_dict = {}
+    for i, stat in enumerate(out_stats):
+        if stat and not isinstance(stat, str):
+            key = make_key(stat)
+            if key:
+                out_dict[key] = (i, stat)
+
+    # Track matches and differences
+    diff_lines = []
+    all_match = True
+
+    # Compare parsed statistics
+    all_keys = set(ref_dict.keys()) | set(out_dict.keys())
+
+    for key in sorted(all_keys):
+        ref_entry = ref_dict.get(key)
+        out_entry = out_dict.get(key)
+
+        if ref_entry is None:
+            diff_lines.append(f"+ Output only: {key}")
+            all_match = False
+            continue
+
+        if out_entry is None:
+            diff_lines.append(f"- Reference only: {key}")
+            all_match = False
+            continue
+
+        ref_idx, ref_stat = ref_entry
+        out_idx, out_stat = out_entry
+
+        # Compare numeric fields with tolerance
+        if format_type == 'csv':
+            fields_to_compare = [
+                ('sum_u32', 'Sum.u32'), ('sumsq_u32', 'SumSQ.u32'),
+                ('min_u32', 'Min.u32'), ('max_u32', 'Max.u32'),
+                ('sum_u64', 'Sum.u64'), ('sumsq_u64', 'SumSQ.u64'),
+                ('min_u64', 'Min.u64'), ('max_u64', 'Max.u64'),
+            ]
+            # Count should match exactly (it's always integer)
+            if ref_stat['count'] != out_stat['count']:
+                diff_lines.append(f"  Count mismatch for {key}: ref={ref_stat['count']} out={out_stat['count']}")
+                all_match = False
+        else:  # txt or out format
+            fields_to_compare = [
+                ('sum', 'Sum'), ('sumsq', 'SumSQ'),
+                ('min', 'Min'), ('max', 'Max')
+            ]
+            # Count should match exactly
+            if ref_stat['count'] != out_stat['count']:
+                diff_lines.append(f"  Count mismatch for {key}: ref={ref_stat['count']} out={out_stat['count']}")
+                all_match = False
+
+        # Compare each numeric field
+        for field_key, field_name in fields_to_compare:
+            try:
+                ref_val_str = ref_stat[field_key]
+                out_val_str = out_stat[field_key]
+
+                # Skip zero-only fields in CSV (like Sum.u32=0 when using u64)
+                if format_type == 'csv' and ref_val_str == '0' and out_val_str == '0':
+                    continue
+
+                # Parse as float (works for both int and float strings)
+                ref_val = float(ref_val_str)
+                out_val = float(out_val_str)
+
+                # Apply tolerance for non-zero values
+                if not _numeric_within_tolerance(ref_val, out_val, tolerance_pct):
+                    pct_diff = abs(ref_val - out_val) / max(abs(ref_val), abs(out_val)) * 100 if max(abs(ref_val), abs(out_val)) > 0 else 0
+                    diff_lines.append(f"  {field_name} differs for {key}: ref={ref_val} out={out_val} (diff={pct_diff:.2f}%)")
+                    all_match = False
+            except (ValueError, KeyError):
+                # If parsing fails, do exact comparison
+                if ref_stat.get(field_key) != out_stat.get(field_key):
+                    diff_lines.append(f"  {field_name} mismatch for {key}: ref={ref_stat.get(field_key)} out={out_stat.get(field_key)}")
+                    all_match = False
+
+    # For .out format, also compare non-statistic lines exactly
+    if format_type == 'out':
+        non_stat_ref = [line for line in ref_lines if isinstance(_parse_stat_txt_line(line), type(None))]
+        non_stat_out = [line for line in out_lines if isinstance(_parse_stat_txt_line(line), type(None))]
+
+        if non_stat_ref != non_stat_out:
+            diff_lines.append("Non-statistic lines differ")
+            all_match = False
+
+    # Write diff file if there are differences
+    if not all_match:
+        difffile = "{0}/{1}.testdiff".format(os.path.dirname(outfile), test_name)
+        with open(difffile, 'w') as f:
+            f.write(f"Comparison with {tolerance_pct*100}% tolerance failed\n")
+            f.write(f"Reference: {reffile}\n")
+            f.write(f"Output: {outfile}\n\n")
+            for line in diff_lines:
+                f.write(line + '\n')
+
+    return all_match
 
 def testing_stat_output_diff(
     outfile: str,

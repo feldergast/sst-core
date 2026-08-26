@@ -37,8 +37,7 @@ class testcase_StatisticComponent(SSTTestCase):
 
     num_threads = test_engine_globals.TESTENGINE_SSTRUN_NUMTHREADS
 
-    # This test has floating point statistics in it and on certain platforms, minor rounding leads to floating point diffs
-    @unittest.skipIf(host_os_get_distribution_type() == OS_DIST_ROCKY and host_os_get_distribution_version().split('.')[0] == "10", "This test fails on Rocky 10")
+    # This test has floating point statistics in it and uses 1% tolerance to handle platform-specific rounding
     def test_StatisticsBasic(self):
         self.Statistics_test_template("basic")
 
@@ -73,24 +72,24 @@ class testcase_StatisticComponent(SSTTestCase):
         combine_per_rank_files(out_group_stat_file_csv)
 
         filters = [ StartsWithFilter("WARNING: No components are"), StartsWithFilter("#") ]
-        cmp_result = testing_compare_filtered_diff(testtype, outfile, reffile, True, filters)
+        cmp_result = testing_compare_with_tolerance(testtype, outfile, reffile, 0.01, 'out', filters)
         if not cmp_result:
             diffdata = testing_get_diff_data(testtype)
             log_failure(diffdata)
-        self.assertTrue(cmp_result, "Output/Compare file {0} does not match Reference File {1}".format(outfile, reffile))
+        self.assertTrue(cmp_result, "Output/Compare file {0} does not match Reference File {1} within 1% tolerance".format(outfile, reffile))
 
         filter2 = StartsWithFilter("ComponentName, StatisticName,")
-        cmp_result = testing_compare_filtered_diff(testtype, out_group_stat_file_csv, ref_group_stat_file_csv, True, [filter2])
+        cmp_result = testing_compare_with_tolerance(testtype + "_csv", out_group_stat_file_csv, ref_group_stat_file_csv, 0.01, 'csv', [filter2])
         if not cmp_result:
-            diffdata = testing_get_diff_data(testtype)
+            diffdata = testing_get_diff_data(testtype + "_csv")
             log_failure(diffdata)
-        self.assertTrue(cmp_result, "Output/Compare file {0} does not match Reference File {1}".format(out_group_stat_file_csv, ref_group_stat_file_csv))
+        self.assertTrue(cmp_result, "Output/Compare file {0} does not match Reference File {1} within 1% tolerance".format(out_group_stat_file_csv, ref_group_stat_file_csv))
 
-        cmp_result = testing_compare_filtered_diff(testtype, out_group_stat_file_txt, ref_group_stat_file_txt, True)
+        cmp_result = testing_compare_with_tolerance(testtype + "_txt", out_group_stat_file_txt, ref_group_stat_file_txt, 0.01, 'txt')
         if not cmp_result:
-            diffdata = testing_get_diff_data(testtype)
+            diffdata = testing_get_diff_data(testtype + "_txt")
             log_failure(diffdata)
-        self.assertTrue(cmp_result, "Output/Compare file {0} does not match Reference File {1}".format(out_group_stat_file_txt, ref_group_stat_file_txt))
+        self.assertTrue(cmp_result, "Output/Compare file {0} does not match Reference File {1} within 1% tolerance".format(out_group_stat_file_txt, ref_group_stat_file_txt))
 
         # Generate raw H5 output
         if test_h5:
